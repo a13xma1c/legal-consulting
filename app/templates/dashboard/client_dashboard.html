@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Welcome, {{ current_user.username }}</h2>
+<h4>Your Consultations</h4>
+<ul>
+    {% for consultation in consultations %}
+        <li>
+            <strong>Message:</strong> {{ consultation.message }}<br>
+            <strong>Status:</strong> {{ consultation.status }}
+            {% if consultation.response %}
+                <br><strong>Response:</strong> {{ consultation.response }}
+            {% else %}
+                <br><small class="text-muted">Pending response...</small>
+            {% endif %}
+        </li>
+    {% endfor %}
+</ul>
+{% endblock %}

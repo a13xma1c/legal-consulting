@@ -2,3 +2,6 @@ flask
 flask-sqlalchemy
 gunicorn
 werkzeug
+flask-login
+wtforms
+flask-bcrypt
