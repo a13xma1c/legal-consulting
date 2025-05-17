@@ -3,4 +3,8 @@ name = "legalconsulting"
 version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.9"
-dependencies = []
+dependencies = [
+    "flask>=3.1.1",
+    "flask-sqlalchemy>=3.1.1",
+    "werkzeug>=3.1.3",
+]
