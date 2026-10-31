@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Privacy Policy - {{ site_name }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-lg-8">
+<h1 class="fw-bold">Privacy policy</h1>
+<p class="text-muted">Last updated: {{ current_year }}</p>
+<h4>What we collect</h4>
+<p>When you register we store your username, email address and (optionally) your name. Consultation requests, forum posts, comments and AI chat conversations are stored so that we can provide the service.</p>
+<h4>AI assistant</h4>
+<p>Messages you send to the AI assistant may be processed by a third-party language-model provider in order to generate a response. Do not share sensitive personal identifiers in the chat.</p>
+<h4>How we use your data</h4>
+<p>To deliver the service, match you with a lawyer, and improve the platform. We do not sell personal data.</p>
+<h4>Your rights</h4>
+<p>You may request a copy of your data or ask us to delete your account by contacting {{ contact_email }}.</p>
+</div></div>
+{% endblock %}

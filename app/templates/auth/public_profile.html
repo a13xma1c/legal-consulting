@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar, author_badge %}
+{% block title %}{{ user.display_name }} - {{ site_name }}{% endblock %}
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body p-4">
+                {{ avatar(user, 96) }}
+                <h3 class="fw-bold mt-3 mb-0">{{ user.display_name }}</h3>
+                <div class="text-muted">@{{ user.username }}</div>
+                <div class="mt-2">{{ author_badge(user) }}</div>
+                {% if user.specialisation %}<div class="text-gold fw-semibold mt-2">{{ user.specialisation }}</div>{% endif %}
+                <div class="small text-muted mt-3">Member since {{ user.created_at.strftime('%B %Y') }}</div>
+                {% if user.is_lawyer and current_user.is_authenticated and current_user.role == 'client' %}
+                <a href="{{ url_for('consultations.create') }}" class="btn btn-gold mt-3 w-100">Request consultation</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        {% if user.bio %}
+        <h4 class="fw-bold">About</h4>
+        <p>{{ user.bio }}</p>
+        {% endif %}
+        {% if recent_posts %}
+        <h4 class="fw-bold mt-4">Recent articles</h4>
+        <ul class="list-group list-group-flush">
+            {% for p in recent_posts %}<li class="list-group-item px-0"><a href="{{ url_for('blog.detail', slug=p.slug) }}" class="text-navy">{{ p.title }}</a> <small class="text-muted">· {{ p.created_at|timeago }}</small></li>{% endfor %}
+        </ul>
+        {% endif %}
+        {% if recent_threads %}
+        <h4 class="fw-bold mt-4">Recent forum threads</h4>
+        <ul class="list-group list-group-flush">
+            {% for t in recent_threads %}<li class="list-group-item px-0"><a href="{{ url_for('forum.thread', slug=t.slug) }}" class="text-navy">{{ t.title }}</a> <small class="text-muted">· {{ t.created_at|timeago }}</small></li>{% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

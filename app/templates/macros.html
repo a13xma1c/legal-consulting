@@ -1,0 +1,63 @@
+{# Reusable template macros #}
+
+{% macro render_field(field, placeholder=None, rows=None, help=None, attrs={}) %}
+<div class="mb-3">
+    {% if field.type != 'BooleanField' %}
+        {{ field.label(class="form-label fw-semibold") }}
+    {% endif %}
+    {% set css = 'form-select' if field.type == 'SelectField' else ('form-check-input' if field.type == 'BooleanField' else 'form-control') %}
+    {% set css = css ~ (' is-invalid' if field.errors else '') %}
+    {% if field.type == 'BooleanField' %}
+        <div class="form-check">
+            {{ field(class=css) }}
+            {{ field.label(class="form-check-label") }}
+        </div>
+    {% elif rows %}
+        {{ field(class=css, rows=rows, placeholder=placeholder or '', **attrs) }}
+    {% else %}
+        {{ field(class=css, placeholder=placeholder or '', **attrs) }}
+    {% endif %}
+    {% for error in field.errors %}
+        <div class="invalid-feedback d-block">{{ error }}</div>
+    {% endfor %}
+    {% if help %}<div class="form-text">{{ help }}</div>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro pagination(pag, endpoint) %}
+{% if pag.pages > 1 %}
+<nav aria-label="Pagination">
+    <ul class="pagination justify-content-center">
+        <li class="page-item {% if not pag.has_prev %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for(endpoint, page=pag.prev_num, **kwargs) if pag.has_prev else '#' }}">&laquo;</a>
+        </li>
+        {% for p in pag.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+            {% if p %}
+                <li class="page-item {% if p == pag.page %}active{% endif %}"><a class="page-link" href="{{ url_for(endpoint, page=p, **kwargs) }}">{{ p }}</a></li>
+            {% else %}
+                <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+        {% endfor %}
+        <li class="page-item {% if not pag.has_next %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for(endpoint, page=pag.next_num, **kwargs) if pag.has_next else '#' }}">&raquo;</a>
+        </li>
+    </ul>
+</nav>
+{% endif %}
+{% endmacro %}
+
+{% macro post_form(action, label, css='btn-outline-danger btn-sm', confirm='Are you sure?', icon='bi-trash') %}
+<form method="POST" action="{{ action }}" class="d-inline" data-confirm="{{ confirm }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn {{ css }}"><i class="bi {{ icon }}"></i> {{ label }}</button>
+</form>
+{% endmacro %}
+
+{% macro author_badge(user) %}
+{% if user.is_lawyer %}<span class="badge bg-gold text-navy" title="Verified lawyer"><i class="bi bi-patch-check-fill"></i> Lawyer</span>
+{% elif user.is_admin %}<span class="badge bg-danger">Admin</span>{% endif %}
+{% endmacro %}
+
+{% macro avatar(user, size=40) %}
+<span class="avatar d-inline-flex align-items-center justify-content-center rounded-circle bg-navy text-gold fw-bold" style="width:{{ size }}px;height:{{ size }}px;font-size:{{ (size * 0.4)|int }}px">{{ user.display_name[:1]|upper }}</span>
+{% endmacro %}

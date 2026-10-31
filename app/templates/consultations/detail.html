@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% from "macros.html" import render_field, post_form %}
+{% block title %}Consultation {{ consultation.reference }} - {{ site_name }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-9">
+        <a href="{{ url_for('dashboard.dashboard_home') }}" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> Back to dashboard</a>
+        <div class="d-flex flex-wrap justify-content-between align-items-center my-3 gap-2">
+            <h2 class="fw-bold mb-0">Consultation request <span class="badge bg-{{ status_badge(consultation.status) }} fs-6 align-middle">{{ consultation.status }}</span></h2>
+            <div class="d-flex gap-2">
+                {% if current_user.is_lawyer and consultation.lawyer_id is none %}
+                    {{ post_form(url_for('consultations.claim', consultation_id=consultation.id), 'Take this case', css='btn-gold btn-sm', confirm='Assign this consultation to yourself?', icon='bi-hand-index-thumb') }}
+                {% endif %}
+                {% if consultation.status != 'Closed' and (consultation.client_id == current_user.id or consultation.lawyer_id == current_user.id or current_user.is_admin) %}
+                    {{ post_form(url_for('consultations.close', consultation_id=consultation.id), 'Close', css='btn-outline-secondary btn-sm', confirm='Close this consultation?', icon='bi-check2-circle') }}
+                {% endif %}
+                {% if (consultation.client_id == current_user.id and consultation.status == 'Pending') or current_user.is_admin %}
+                    {{ post_form(url_for('consultations.delete', consultation_id=consultation.id), 'Withdraw', confirm='Withdraw this request? This cannot be undone.') }}
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                <div class="row small text-muted mb-3">
+                    <div class="col-sm-3"><strong>Reference:</strong> {{ consultation.reference }}</div>
+                    <div class="col-sm-3"><strong>Client:</strong> {{ consultation.client.display_name }}</div>
+                    <div class="col-sm-3"><strong>Practice area:</strong> {{ consultation.practice_area_label }}</div>
+                    <div class="col-sm-3"><strong>Preferred date:</strong> {{ consultation.preferred_date.strftime('%d %b %Y') if consultation.preferred_date else 'Flexible' }}</div>
+                </div>
+                <h6 class="fw-bold text-uppercase small text-muted">Request</h6>
+                <p class="mb-2" style="white-space: pre-line">{{ consultation.message }}</p>
+                <div class="small text-muted">Submitted {{ consultation.created_at|timeago }}</div>
+            </div>
+        </div>
+
+        {% if consultation.response %}
+        <div class="card border-0 shadow-sm mb-4 border-start border-4 border-gold">
+            <div class="card-body p-4">
+                <h6 class="fw-bold text-uppercase small text-muted">Response from {{ consultation.lawyer.display_name }}{% if consultation.lawyer.specialisation %} · {{ consultation.lawyer.specialisation }}{% endif %}</h6>
+                <div class="markdown-body">{{ consultation.response|markdown }}</div>
+                <div class="small text-muted">Updated {{ consultation.updated_at|timeago }}</div>
+            </div>
+        </div>
+        {% elif consultation.lawyer %}
+        <div class="alert alert-info"><i class="bi bi-hourglass-split"></i> {{ consultation.lawyer.display_name }} is reviewing this request.</div>
+        {% else %}
+        <div class="alert alert-light border"><i class="bi bi-hourglass"></i> Awaiting a lawyer. Typical response time: one business day.</div>
+        {% endif %}
+
+        {% if current_user.is_lawyer and consultation.status != 'Closed' and consultation.lawyer_id in (none, current_user.id) %}
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <h5 class="fw-bold">{{ 'Update your response' if consultation.response else 'Respond to the client' }}</h5>
+                <form method="POST" novalidate>
+                    {{ form.hidden_tag() }}
+                    {{ render_field(form.response, rows=8, help="Markdown supported. Responding assigns this consultation to you.") }}
+                    <button type="submit" class="btn btn-navy">{{ form.submit.label.text }}</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

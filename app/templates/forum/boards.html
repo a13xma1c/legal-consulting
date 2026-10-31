@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% from "macros.html" import render_field, post_form %}
+{% block title %}Forum boards - {{ site_name }}{% endblock %}
+{% block content %}
+<h2 class="fw-bold mb-4">Forum boards</h2>
+<div class="row g-4">
+    <div class="col-lg-7">
+        <table class="table bg-white shadow-sm align-middle">
+            <thead class="table-light"><tr><th>Name</th><th>Slug</th><th>Threads</th><th></th></tr></thead>
+            <tbody>
+                {% for b in boards %}
+                <tr><td>{{ b.name }}<div class="small text-muted">{{ b.description or '' }}</div></td><td><code>{{ b.slug }}</code></td><td>{{ b.thread_count }}</td>
+                    <td class="text-end">{% if b.thread_count == 0 %}{{ post_form(url_for('forum.delete_board', board_id=b.id), '', confirm='Delete this board?') }}{% endif %}</td></tr>
+                {% else %}<tr><td colspan="4" class="text-muted">No boards yet.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm"><div class="card-body">
+            <h5 class="fw-bold">New board</h5>
+            <form method="POST" novalidate>
+                {{ form.hidden_tag() }}
+                {{ render_field(form.name) }}
+                {{ render_field(form.description) }}
+                <button type="submit" class="btn btn-navy">{{ form.submit.label.text }}</button>
+            </form>
+        </div></div>
+    </div>
+</div>
+{% endblock %}

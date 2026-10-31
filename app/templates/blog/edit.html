@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% from "macros.html" import render_field %}
+{% block title %}{{ 'Edit' if post else 'New' }} article - {{ site_name }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-9">
+        <h2 class="fw-bold">{{ 'Edit article' if post else 'Write a new article' }}</h2>
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <form method="POST" novalidate>
+                    {{ form.hidden_tag() }}
+                    {{ render_field(form.title) }}
+                    <div class="row">
+                        <div class="col-md-8">{{ render_field(form.summary, help="Shown in listings and search results.") }}</div>
+                        <div class="col-md-4">{{ render_field(form.category_id) }}</div>
+                    </div>
+                    {{ render_field(form.body, rows=18, help="Markdown supported: **bold**, *italic*, ## headings, lists, tables, links.") }}
+                    {{ render_field(form.published) }}
+                    <button type="submit" class="btn btn-navy">{{ form.submit.label.text }}</button>
+                    <a href="{{ url_for('blog.detail', slug=post.slug) if post else url_for('blog.index') }}" class="btn btn-link">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

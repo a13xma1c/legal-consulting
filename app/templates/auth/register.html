@@ -1,47 +1,30 @@
 {% extends "base.html" %}
+{% from "macros.html" import render_field %}
+{% block title %}Create account - {{ site_name }}{% endblock %}
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-6">
-        <h2 class="text-center">Register</h2>
-        <form method="POST">
-            {{ form.hidden_tag() }}
-            <div class="mb-3">
-                {{ form.username.label(class="form-label") }}
-                {{ form.username(class="form-control") }}
-                {% for error in form.username.errors %}
-                    <small class="form-text text-danger">{{ error }}</small>
-                {% endfor %}
+    <div class="col-md-8 col-lg-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <h2 class="fw-bold text-center mb-1">Create your account</h2>
+                <p class="text-center text-muted small mb-4">Free to join. Request consultations, join the forum and save your chat history.</p>
+                <form method="POST" novalidate>
+                    {{ form.hidden_tag() }}
+                    <div class="row">
+                        <div class="col-md-6">{{ render_field(form.username) }}</div>
+                        <div class="col-md-6">{{ render_field(form.full_name) }}</div>
+                    </div>
+                    {{ render_field(form.email, placeholder="you@example.com") }}
+                    <div class="row">
+                        <div class="col-md-6">{{ render_field(form.password, help="At least 8 characters.") }}</div>
+                        <div class="col-md-6">{{ render_field(form.confirm_password) }}</div>
+                    </div>
+                    {{ render_field(form.role) }}
+                    <button type="submit" class="btn btn-gold w-100">{{ form.submit.label.text }}</button>
+                </form>
+                <p class="text-center small text-muted mt-3 mb-0">Already registered? <a href="{{ url_for('auth.login') }}">Log in</a></p>
             </div>
-            <div class="mb-3">
-                {{ form.email.label(class="form-label") }}
-                {{ form.email(class="form-control") }}
-                {% for error in form.email.errors %}
-                    <small class="form-text text-danger">{{ error }}</small>
-                {% endfor %}
-            </div>
-            <div class="mb-3">
-                {{ form.password.label(class="form-label") }}
-                {{ form.password(class="form-control") }}
-                {% for error in form.password.errors %}
-                    <small class="form-text text-danger">{{ error }}</small>
-                {% endfor %}
-            </div>
-            <div class="mb-3">
-                {{ form.confirm_password.label(class="form-label") }}
-                {{ form.confirm_password(class="form-control") }}
-                {% for error in form.confirm_password.errors %}
-                    <small class="form-text text-danger">{{ error }}</small>
-                {% endfor %}
-            </div>
-            <div class="mb-3">
-                {{ form.role.label(class="form-label") }}
-                {{ form.role(class="form-control") }}
-                {% for error in form.role.errors %}
-                    <small class="form-text text-danger">{{ error }}</small>
-                {% endfor %}
-            </div>
-            <button type="submit" class="btn btn-success w-100">Register</button>
-        </form>
+        </div>
     </div>
 </div>
 {% endblock %}

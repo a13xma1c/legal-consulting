@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% from "macros.html" import render_field, post_form, author_badge, avatar, pagination as paginate %}
+{% block title %}{{ thread.title }} - Forum - {{ site_name }}{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb"><ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="{{ url_for('forum.index') }}">Forum</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('forum.board', slug=thread.board.slug) }}">{{ thread.board.name }}</a></li>
+    <li class="breadcrumb-item active text-truncate" style="max-width: 300px">{{ thread.title }}</li>
+</ol></nav>
+
+<div class="row justify-content-center">
+    <div class="col-lg-9">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+            <h1 class="fw-bold h2 mb-0">
+                {% if thread.pinned %}<i class="bi bi-pin-angle-fill text-gold" title="Pinned"></i>{% endif %}
+                {% if thread.locked %}<i class="bi bi-lock-fill text-muted" title="Locked"></i>{% endif %}
+                {{ thread.title }}
+            </h1>
+            {% if current_user.is_authenticated %}
+            <div class="d-flex gap-2 flex-wrap">
+                {% if current_user.is_admin %}
+                    {{ post_form(url_for('forum.toggle_pin', slug=thread.slug), 'Unpin' if thread.pinned else 'Pin', css='btn-outline-secondary btn-sm', confirm='Toggle pin?', icon='bi-pin-angle') }}
+                    {{ post_form(url_for('forum.toggle_lock', slug=thread.slug), 'Unlock' if thread.locked else 'Lock', css='btn-outline-secondary btn-sm', confirm='Toggle lock?', icon='bi-lock') }}
+                {% endif %}
+                {% if current_user.id == thread.author_id or current_user.is_admin %}
+                    <a href="{{ url_for('forum.edit_thread', slug=thread.slug) }}" class="btn btn-outline-navy btn-sm"><i class="bi bi-pencil"></i> Edit</a>
+                    {{ post_form(url_for('forum.delete_thread', slug=thread.slug), 'Delete', confirm='Delete this thread and all replies?') }}
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Original post -->
+        <div class="card border-0 shadow-sm mb-4 border-start border-4 border-navy">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    {{ avatar(thread.author, 40) }}
+                    <div>
+                        <a href="{{ url_for('auth.public_profile', username=thread.author.username) }}" class="fw-semibold text-navy text-decoration-none">{{ thread.author.display_name }}</a> {{ author_badge(thread.author) }}
+                        <div class="small text-muted">{{ thread.created_at|timeago }} · {{ thread.views }} views</div>
+                    </div>
+                </div>
+                <div class="markdown-body">{{ thread.body|markdown }}</div>
+            </div>
+        </div>
+
+        <h5 class="fw-bold mb-3">{{ thread.reply_count }} repl{{ 'y' if thread.reply_count == 1 else 'ies' }}</h5>
+        {% for reply in pagination.items %}
+        <div class="card border-0 shadow-sm mb-3 {% if reply.author.is_lawyer %}border-start border-4 border-gold{% endif %}" id="reply-{{ reply.id }}">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="d-flex align-items-center gap-2">
+                        {{ avatar(reply.author, 32) }}
+                        <div>
+                            <a href="{{ url_for('auth.public_profile', username=reply.author.username) }}" class="fw-semibold text-navy text-decoration-none">{{ reply.author.display_name }}</a> {{ author_badge(reply.author) }}
+                            <div class="small text-muted">{{ reply.created_at|timeago }}</div>
+                        </div>
+                    </div>
+                    {% if current_user.is_authenticated and (current_user.id == reply.author_id or current_user.is_admin) %}
+                        {{ post_form(url_for('forum.delete_reply', reply_id=reply.id), '', css='btn-link btn-sm text-danger p-0', confirm='Delete this reply?') }}
+                    {% endif %}
+                </div>
+                <div class="markdown-body">{{ reply.body|markdown }}</div>
+            </div>
+        </div>
+        {% endfor %}
+        {{ paginate(pagination, 'forum.thread', slug=thread.slug) }}
+
+        {% if thread.locked and not (current_user.is_authenticated and current_user.is_admin) %}
+        <div class="alert alert-secondary"><i class="bi bi-lock-fill"></i> This thread is locked. New replies are not accepted.</div>
+        {% elif current_user.is_authenticated %}
+        <div class="card border-0 shadow-sm mt-4"><div class="card-body p-4">
+            <h5 class="fw-bold">Post a reply</h5>
+            <form method="POST" novalidate>
+                {{ form.hidden_tag() }}
+                {{ render_field(form.body, rows=5, placeholder="Be helpful and respectful. Markdown supported.") }}
+                <button type="submit" class="btn btn-navy">{{ form.submit.label.text }}</button>
+            </form>
+        </div></div>
+        {% else %}
+        <div class="alert alert-light border mt-4"><a href="{{ url_for('auth.login', next=request.path) }}">Log in</a> or <a href="{{ url_for('auth.register') }}">create an account</a> to reply.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

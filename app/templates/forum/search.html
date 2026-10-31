@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% from "macros.html" import pagination as paginate %}
+{% block title %}Search forum - {{ site_name }}{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb"><ol class="breadcrumb small"><li class="breadcrumb-item"><a href="{{ url_for('forum.index') }}">Forum</a></li><li class="breadcrumb-item active">Search</li></ol></nav>
+<form method="GET" class="d-flex mb-4" role="search">
+    <input type="search" name="q" class="form-control me-2" value="{{ q }}" placeholder="Search threads" aria-label="Search threads">
+    <button class="btn btn-navy" type="submit">Search</button>
+</form>
+<h5 class="text-muted mb-3">{{ pagination.total }} result{{ '' if pagination.total == 1 else 's' }}{% if q %} for "{{ q }}"{% endif %}</h5>
+<div class="list-group shadow-sm mb-4">
+    {% for t in pagination.items %}{% with show_board=True %}{% include "forum/_thread_row.html" %}{% endwith %}
+    {% else %}<div class="list-group-item text-muted p-4 text-center">No threads found.</div>{% endfor %}
+</div>
+{{ paginate(pagination, 'forum.search', q=q) }}
+{% endblock %}
