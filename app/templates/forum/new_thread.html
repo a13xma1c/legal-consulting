@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% from "macros.html" import render_field %}
+{% block title %}{{ 'Edit thread' if thread else 'New thread' }} - {{ site_name }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <h2 class="fw-bold">{{ 'Edit thread' if thread else 'Start a new thread' }}</h2>
+        {% if not thread %}<p class="text-muted">Describe your situation in general terms. <strong>Do not include names, addresses or other identifying details.</strong></p>{% endif %}
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <form method="POST" novalidate>
+                    {{ form.hidden_tag() }}
+                    {{ render_field(form.board_id) }}
+                    {{ render_field(form.title, placeholder="Summarise your question in one line") }}
+                    {{ render_field(form.body, rows=10, help="Markdown supported.") }}
+                    <button type="submit" class="btn btn-gold">{{ 'Save changes' if thread else form.submit.label.text }}</button>
+                    <a href="{{ url_for('forum.thread', slug=thread.slug) if thread else url_for('forum.index') }}" class="btn btn-link">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,167 @@
+# LexCounsel — Legal Consulting Platform
+
+A full-featured legal consulting website built with Flask:
+
+| Feature | Details |
+|---|---|
+| **Consultations** | Clients describe their matter; lawyers claim, respond (Markdown), and close requests. Role-aware dashboards for clients, lawyers and admins. |
+| **Blog** | Lawyers/admins publish Markdown articles with categories, drafts, search, pagination, related posts and reader comments. |
+| **Forum** | Boards → threads → replies. Search, pagination, view counts, lawyer badges, admin pin/lock, owner edit/delete. |
+| **AI instant chat** | Floating widget on every page plus a full-page assistant. Anthropic-powered when an API key is set; otherwise a built-in offline knowledge base. Sessions persist for anonymous and logged-in visitors; rate limited. |
+| **Accounts** | Register with e-mail verification (signed, expiring links), log in with username *or* e-mail, resend-verification, password reset and change-password flows. E-mail notifications when a lawyer claims or answers a request. |
+| **Admin** | User management: search, change roles, manually verify, deactivate/reactivate accounts. Blog categories and forum boards. |
+| **Security** | Bcrypt passwords, CSRF on forms *and* JSON API, role-based access control, sanitised Markdown (bleach), open-redirect protection, login/e-mail rate limiting, Content-Security-Policy + security headers, secure cookies & HSTS in production. |
+| **Operations** | Alembic migrations (`flask db`), `/healthz` probe, `robots.txt`, `sitemap.xml`, pre-commit hooks. |
+| **Testing** | 380+ fully type-annotated pytest tests (mypy-checked): unit, integration and Playwright browser end-to-end. 100% line coverage, pylint 10/10, GitHub Actions CI (uv) on Python 3.10–3.12. |
+
+## Quick start
+
+Requires [uv](https://docs.astral.sh/uv/) (`curl -LsSf https://astral.sh/uv/install.sh | sh`).
+
+```bash
+uv sync                             # creates .venv and installs all deps (incl. dev group)
+
+uv run flask --app wsgi db upgrade  # create / migrate the database schema
+uv run flask --app wsgi seed        # demo users, articles, forum threads
+uv run flask --app wsgi run --debug
+```
+
+Open <http://127.0.0.1:5000>. Demo accounts (password `password123`):
+
+| Email | Role |
+|---|---|
+| `admin@lexcounsel.example` | admin |
+| `amelia@lexcounsel.example` | lawyer |
+| `david@lexcounsel.example` | lawyer |
+| `client@example.com` | client |
+
+Create your own admin with `uv run flask --app wsgi create-admin`.
+
+## Database migrations
+
+The schema is managed with Alembic via Flask-Migrate (`migrations/`). After changing a model:
+
+```bash
+uv run flask --app wsgi db migrate -m "describe the change"   # autogenerate a revision
+# review migrations/versions/<rev>_*.py, then
+uv run flask --app wsgi db upgrade
+```
+
+`tests/test_migrations.py` builds a database purely from migrations and compares it to the models,
+so CI fails if you forget to generate one. (`flask init-db` is kept as an alias for `db upgrade`.)
+
+## Managing dependencies
+
+```bash
+uv add <package>            # add a runtime dependency
+uv add --group dev <pkg>    # add a dev-only dependency
+uv lock --upgrade           # refresh the lockfile
+uv sync --locked --no-dev   # production install (fails if lock is stale)
+```
+
+## Configuration
+
+All settings are environment variables (see `.env.example`):
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `FLASK_CONFIG` | `development` | `development`, `testing` or `production` |
+| `SECRET_KEY` | dev placeholder | **Set a long random value in production** |
+| `DATABASE_URL` | `sqlite:///site.db` | Any SQLAlchemy URL; `postgres://` is auto-normalised |
+| `AI_PROVIDER` | `auto` | `auto` uses Anthropic if a key is present, else the offline fallback |
+| `ANTHROPIC_API_KEY` | — | Enables the live AI assistant |
+| `ANTHROPIC_MODEL` | `claude-sonnet-4-20250514` | Model name |
+| `CHAT_RATE_LIMIT` / `CHAT_RATE_WINDOW` | `30` / `300` | Messages per window per visitor |
+| `MAIL_SERVER`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_USE_TLS`, `MAIL_DEFAULT_SENDER` | unset | SMTP for verification e-mails. If `MAIL_SERVER` is unset, messages are logged to the console (and, in development, the link is shown in the UI). |
+| `VERIFY_TOKEN_MAX_AGE` / `RESET_TOKEN_MAX_AGE` | `86400` / `3600` | Lifetime of verification / password-reset links |
+| `LOGIN_RATE_LIMIT` / `LOGIN_RATE_WINDOW` | `10` / `300` | Login attempts per IP per window |
+| `EMAIL_RATE_LIMIT` / `EMAIL_RATE_WINDOW` | `5` / `3600` | Verification/reset e-mails per IP per window |
+| `CONTENT_SECURITY_POLICY` | strict default | Override or set empty to disable the CSP header |
+
+## AI assistant design
+
+`app/services/ai.py` defines a provider interface with two implementations:
+
+- **`AnthropicProvider`** — calls the Messages API with a legal-information system prompt (general information, not advice; asks about jurisdiction; never invents citations; nudges toward booking a consultation).
+- **`FallbackProvider`** — deterministic keyword matcher covering tenancy, employment, family, contracts, wills, property, criminal, business, immigration, injury and booking. Used when no key is configured and throughout the test-suite so tests never touch the network.
+
+`LegalAssistant` wraps a provider, sanitises/merges history, and trims to the last *N* turns. The chat blueprint (`app/routes/chat.py`) exposes:
+
+```
+GET  /chat/                 full-page UI
+GET  /chat/api/history      current conversation (JSON)
+POST /chat/api/message      {"message": "..."} → {"user_message", "reply", "provider"}
+POST /chat/api/reset        start a new conversation
+```
+
+JSON requests must include the `X-CSRFToken` header (read from the `<meta name="csrf-token">` tag — `static/js/chat.js` handles this).
+
+## Project layout
+
+```
+pyproject.toml          project metadata + dependencies (managed by uv)
+uv.lock                 pinned, cross-platform lockfile
+wsgi.py                 entry point (gunicorn wsgi:app)
+config.py               Development / Testing / Production configs
+app/
+  __init__.py           application factory, Jinja filters
+  extensions.py         db, bcrypt, login_manager, csrf
+  models.py             User, Consultation, Category, Post, Comment, Board, Thread, Reply, ChatSession, ChatMessage
+  forms.py              WTForms
+  utils.py              slugify, sanitised Markdown, role_required
+  cli.py                init-db / seed / create-admin
+  services/ai.py        AI assistant providers
+  services/mail.py      SMTP / logging mailer
+  services/tokens.py    signed verification & password-reset tokens
+  services/ratelimit.py sliding-window rate limiter
+  services/notifications.py  consultation e-mails
+  routes/               main, auth, admin, dashboard, consultations, blog, forum, chat, ops, errors
+migrations/             Alembic revisions
+  templates/, static/
+tests/                  pytest suite (see below)
+```
+
+## Testing
+
+```bash
+uv run playwright install chromium              # once - browser for the e2e tests
+uv run pytest                                   # everything (unit + integration + e2e)
+uv run pytest -m "not e2e" -p no:playwright     # fast: skip browser tests
+uv run pytest tests/e2e --headed                # watch the browser tests run
+uv run pytest --cov --cov-report=term-missing   # coverage (unit/integration)
+uv run mypy                                     # type-check the test-suite
+uv run pylint app config.py wsgi.py             # lint
+```
+
+All tests are type-annotated and checked by mypy (`disallow_untyped_defs`), so fixtures
+and helpers have explicit, documented types.
+
+**Unit / integration tests** (`tests/test_*.py`) use an in-memory SQLite database per test and cover:
+
+- **Unit**: models & relationships, forms, slug/markdown utilities, AI providers (with a fake Anthropic client), rate limiter, Jinja filters.
+- **Integration**: every route for every role (client / lawyer / admin / anonymous), pagination, search, moderation, consultation lifecycle, chat API including session hijack prevention and provider failure handling.
+- **Security**: CSRF enforcement (separate app instance with CSRF on), XSS escaping/sanitisation, open-redirect blocking, password hashing, permission matrix.
+- **CLI**: init-db, seed (idempotent), create-admin.
+
+**Browser end-to-end tests** (`tests/e2e/`, Playwright + Chromium) start a real Flask server
+in a background thread with CSRF enabled and demo data seeded before each test, then drive
+the site like a user:
+
+- Registration → verification link → blocked login before verifying → login with *username* → logout
+- Full consultation lifecycle: client submits (past date rejected), lawyer claims and responds in
+  Markdown, client reads and closes; row numbering and `LC-xxxxx` references
+- Forum: create thread (board pre-selected), lawyer reply badge, locked threads, admin pin/lock
+- Blog: lawyer publishes an article, category filter, client comments
+- AI chat: full-page conversation, Markdown rendering, suggestion chips, reload persistence, reset,
+  and the floating widget (open/send/close, shared history)
+- Public pages, search, 404/403 pages, contact form
+
+Set `E2E_OFFLINE=1` to block CDN requests (Bootstrap) when running without internet access.
+
+## Deployment
+
+`Procfile` runs `uv run flask --app wsgi db upgrade` on release and serves with `uv run gunicorn wsgi:app`. Dependencies are pinned in `uv.lock`; use `uv sync --locked --no-dev` for a production install without test tooling. Set `FLASK_CONFIG=production`, `SECRET_KEY`, `DATABASE_URL` and (optionally) `ANTHROPIC_API_KEY`.
+
+## Disclaimer
+
+Content produced by the platform — articles, forum replies and AI responses — is general legal information and not legal advice.

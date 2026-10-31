@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% from "macros.html" import render_field, post_form %}
+{% block title %}Blog categories - {{ site_name }}{% endblock %}
+{% block content %}
+<h2 class="fw-bold mb-4">Blog categories</h2>
+<div class="row g-4">
+    <div class="col-lg-7">
+        <table class="table bg-white shadow-sm align-middle">
+            <thead class="table-light"><tr><th>Name</th><th>Slug</th><th>Posts</th><th></th></tr></thead>
+            <tbody>
+                {% for c in categories %}
+                <tr><td>{{ c.name }}<div class="small text-muted">{{ c.description or '' }}</div></td><td><code>{{ c.slug }}</code></td><td>{{ c.posts.count() }}</td>
+                    <td class="text-end">{{ post_form(url_for('blog.delete_category', category_id=c.id), '', confirm='Delete this category? Posts will become uncategorised.') }}</td></tr>
+                {% else %}<tr><td colspan="4" class="text-muted">No categories yet.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm"><div class="card-body">
+            <h5 class="fw-bold">New category</h5>
+            <form method="POST" novalidate>
+                {{ form.hidden_tag() }}
+                {{ render_field(form.name) }}
+                {{ render_field(form.description) }}
+                <button type="submit" class="btn btn-navy">{{ form.submit.label.text }}</button>
+            </form>
+        </div></div>
+    </div>
+</div>
+{% endblock %}

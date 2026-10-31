@@ -1,0 +1,54 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    name: Lint, type-check & unit tests (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        enable-cache: true
+    - name: Set up Python ${{ matrix.python-version }}
+      run: uv python install ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: uv sync --locked --python ${{ matrix.python-version }}
+    - name: Lint with pylint
+      run: uv run pylint app config.py wsgi.py
+    - name: Type-check tests with mypy
+      run: uv run mypy
+    - name: Unit & integration tests with coverage
+      run: uv run pytest -m "not e2e" -p no:playwright --cov --cov-report=term-missing --cov-report=xml
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-${{ matrix.python-version }}
+        path: coverage.xml
+
+  e2e:
+    name: Browser tests (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        enable-cache: true
+    - name: Install dependencies
+      run: uv sync --locked
+    - name: Install Playwright browsers
+      run: uv run playwright install --with-deps chromium
+    - name: Run end-to-end tests
+      run: uv run pytest tests/e2e --tracing retain-on-failure
+    - name: Upload Playwright traces
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: playwright-traces
+        path: test-results/

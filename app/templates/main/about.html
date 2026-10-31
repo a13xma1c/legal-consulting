@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar %}
+{% block title %}About - {{ site_name }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <h1 class="fw-bold">About {{ site_name }}</h1>
+        <p class="lead text-muted">We believe good legal help should be understandable, accessible and fairly priced.</p>
+        <p>{{ site_name }} was founded by lawyers who were frustrated that so many people only sought advice once a problem had become a crisis. Our platform combines experienced practitioners with modern tools - a searchable library of plain-English articles, a moderated community forum and an AI assistant that can help you understand your situation before you ever speak to a lawyer.</p>
+        <h3 class="fw-bold mt-5">Our principles</h3>
+        <ul>
+            <li><strong>Plain English.</strong> If you can't understand the advice, it isn't useful.</li>
+            <li><strong>Transparent costs.</strong> You'll always know what something will cost before you commit.</li>
+            <li><strong>Early intervention.</strong> Most legal problems are cheaper and easier to fix early.</li>
+        </ul>
+    </div>
+</div>
+{% if lawyers %}
+<h2 class="fw-bold mt-5 mb-4 text-center">Meet the team</h2>
+<div class="row g-4 justify-content-center">
+    {% for lawyer in lawyers %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 border-0 shadow-sm text-center">
+            <div class="card-body">
+                {{ avatar(lawyer, 72) }}
+                <h5 class="mt-3 mb-0">{{ lawyer.display_name }}</h5>
+                <div class="text-gold small fw-semibold">{{ lawyer.specialisation or 'General practice' }}</div>
+                <p class="text-muted small mt-2">{{ lawyer.bio or 'Profile coming soon.' }}</p>
+                <a href="{{ url_for('auth.public_profile', username=lawyer.username) }}" class="btn btn-outline-navy btn-sm">View profile</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

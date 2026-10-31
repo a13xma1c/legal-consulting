@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar %}
+{% block title %}{{ site_name }} - Legal Consulting, Blog, Forum & AI Assistant{% endblock %}
+
+{% block hero %}
+<section class="hero bg-navy text-light py-5">
+    <div class="container py-lg-5">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-7">
+                <span class="badge bg-gold text-navy mb-3">Trusted by clients since 2009</span>
+                <h1 class="display-4 fw-bold">Clear legal guidance,<br>when you need it most.</h1>
+                <p class="lead text-light-50 mt-3">Book a consultation with an experienced lawyer, learn from our articles, ask the community, or get instant answers from our AI legal assistant - available 24/7.</p>
+                <div class="d-flex flex-wrap gap-3 mt-4">
+                    <a href="{{ url_for('consultations.create') }}" class="btn btn-gold btn-lg"><i class="bi bi-calendar-check"></i> Book a consultation</a>
+                    <a href="{{ url_for('chat.page') }}" class="btn btn-outline-light btn-lg"><i class="bi bi-chat-dots"></i> Ask the AI assistant</a>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="card border-0 shadow-lg hero-card">
+                    <div class="card-body p-4">
+                        <h5 class="card-title text-navy fw-bold"><i class="bi bi-robot text-gold"></i> Instant answers</h5>
+                        <div class="chat-preview small">
+                            <div class="bubble bubble-user">My landlord is keeping my deposit for cleaning. Is that allowed?</div>
+                            <div class="bubble bubble-assistant">Deductions must reflect actual loss. If you left the property as clean as you found it, a full professional-clean charge is usually not justified. Ask for an itemised breakdown…</div>
+                        </div>
+                        <a href="{{ url_for('chat.page') }}" class="btn btn-navy w-100 mt-3">Start chatting</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<!-- Services -->
+<section class="py-4">
+    <div class="d-flex justify-content-between align-items-end mb-3">
+        <div>
+            <h2 class="fw-bold mb-1">Practice areas</h2>
+            <p class="text-muted mb-0">Specialist lawyers across the matters that affect everyday life.</p>
+        </div>
+        <a href="{{ url_for('main.services') }}" class="btn btn-outline-navy btn-sm">All services</a>
+    </div>
+    <div class="row g-3">
+        {% for s in services %}
+        <div class="col-md-6 col-lg-4">
+            <a href="{{ url_for('main.services') }}#{{ s.slug }}" class="card service-card h-100 text-decoration-none">
+                <div class="card-body">
+                    <i class="bi {{ s.icon }} fs-2 text-gold"></i>
+                    <h5 class="card-title mt-2 text-navy">{{ s.title }}</h5>
+                    <p class="card-text text-muted small">{{ s.blurb }}</p>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<!-- How it works -->
+<section class="py-5">
+    <h2 class="fw-bold text-center mb-4">How it works</h2>
+    <div class="row g-4 text-center">
+        <div class="col-md-4">
+            <div class="step-number">1</div>
+            <h5 class="mt-3">Tell us about your matter</h5>
+            <p class="text-muted small">Create a free account and describe your situation. Not sure where to start? Ask the AI assistant first.</p>
+        </div>
+        <div class="col-md-4">
+            <div class="step-number">2</div>
+            <h5 class="mt-3">A lawyer reviews it</h5>
+            <p class="text-muted small">A lawyer in the relevant practice area picks up your request and responds through your dashboard.</p>
+        </div>
+        <div class="col-md-4">
+            <div class="step-number">3</div>
+            <h5 class="mt-3">Decide your next step</h5>
+            <p class="text-muted small">Understand your options and the likely costs before committing to anything further.</p>
+        </div>
+    </div>
+</section>
+
+<div class="row g-4 py-4">
+    <!-- Latest posts -->
+    <div class="col-lg-7">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="fw-bold mb-0">From the blog</h3>
+            <a href="{{ url_for('blog.index') }}" class="btn btn-outline-navy btn-sm">All articles</a>
+        </div>
+        {% if latest_posts %}
+            {% for post in latest_posts %}
+            <article class="card mb-3 border-0 shadow-sm">
+                <div class="card-body">
+                    {% if post.category %}<a href="{{ url_for('blog.index', category=post.category.slug) }}" class="badge bg-light text-navy text-decoration-none">{{ post.category.name }}</a>{% endif %}
+                    <h5 class="card-title mt-2"><a href="{{ url_for('blog.detail', slug=post.slug) }}" class="text-navy text-decoration-none">{{ post.title }}</a></h5>
+                    <p class="card-text text-muted small">{{ post.summary or post.body|excerpt(140) }}</p>
+                    <div class="small text-muted"><i class="bi bi-person"></i> {{ post.author.display_name }} · {{ post.created_at|timeago }} · {{ post.reading_time }} min read</div>
+                </div>
+            </article>
+            {% endfor %}
+        {% else %}
+            <p class="text-muted">No articles yet. Check back soon.</p>
+        {% endif %}
+    </div>
+
+    <!-- Forum activity + lawyers -->
+    <div class="col-lg-5">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="fw-bold mb-0">Community forum</h3>
+            <a href="{{ url_for('forum.index') }}" class="btn btn-outline-navy btn-sm">Visit forum</a>
+        </div>
+        <div class="list-group shadow-sm mb-4">
+            {% for t in active_threads %}
+            <a href="{{ url_for('forum.thread', slug=t.slug) }}" class="list-group-item list-group-item-action">
+                <div class="d-flex justify-content-between">
+                    <span class="fw-semibold text-navy">{% if t.pinned %}<i class="bi bi-pin-angle-fill text-gold"></i> {% endif %}{{ t.title }}</span>
+                    <small class="text-muted text-nowrap ms-2"><i class="bi bi-chat"></i> {{ t.reply_count }}</small>
+                </div>
+                <small class="text-muted">{{ t.board.name }} · {{ t.last_activity|timeago }}</small>
+            </a>
+            {% else %}
+            <div class="list-group-item text-muted">No discussions yet - be the first to post.</div>
+            {% endfor %}
+        </div>
+
+        {% if lawyers %}
+        <h4 class="fw-bold mb-3">Our lawyers</h4>
+        {% for lawyer in lawyers %}
+        <div class="d-flex align-items-center gap-3 mb-3">
+            {{ avatar(lawyer, 48) }}
+            <div>
+                <a href="{{ url_for('auth.public_profile', username=lawyer.username) }}" class="fw-semibold text-navy text-decoration-none">{{ lawyer.display_name }}</a>
+                <div class="small text-muted">{{ lawyer.specialisation or 'General practice' }}</div>
+            </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

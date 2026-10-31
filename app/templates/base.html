@@ -1,57 +1,166 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Legal Consulting</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="description" content="{% block meta_description %}{{ site_name }} - trusted legal consulting, expert articles, a community forum and an instant AI legal assistant.{% endblock %}">
+    <title>{% block title %}{{ site_name }}{% endblock %}</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    {% block head %}{% endblock %}
 </head>
-<body>
-    <!-- Navigation Bar -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+<body class="d-flex flex-column min-vh-100">
+    <a class="visually-hidden-focusable" href="#main-content">Skip to main content</a>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-navy sticky-top shadow-sm">
         <div class="container">
-            <a class="navbar-brand" href="/">Legal Consulting</a>
+            <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="{{ url_for('main.home') }}">
+                <i class="bi bi-bank2 text-gold"></i> {{ site_name }}
+            </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'main.services' %}active{% endif %}" href="{{ url_for('main.services') }}">Services</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.blueprint == 'blog' %}active{% endif %}" href="{{ url_for('blog.index') }}">Blog</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.blueprint == 'forum' %}active{% endif %}" href="{{ url_for('forum.index') }}">Forum</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.blueprint == 'chat' %}active{% endif %}" href="{{ url_for('chat.page') }}"><i class="bi bi-chat-dots"></i> AI Assistant</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'main.about' %}active{% endif %}" href="{{ url_for('main.about') }}">About</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'main.contact' %}active{% endif %}" href="{{ url_for('main.contact') }}">Contact</a></li>
+                </ul>
+                <ul class="navbar-nav ms-auto align-items-lg-center">
                     {% if current_user.is_authenticated %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="/dashboard">Dashboard</a>
+                        {% if current_user.role == 'client' %}
+                        <li class="nav-item me-lg-2">
+                            <a class="btn btn-gold btn-sm" href="{{ url_for('consultations.create') }}"><i class="bi bi-calendar-plus"></i> Book consultation</a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/logout">Logout</a>
+                        {% endif %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-person-circle"></i> {{ current_user.display_name }}
+                                {% if current_user.is_lawyer %}<span class="badge bg-gold text-navy ms-1">Lawyer</span>{% elif current_user.is_admin %}<span class="badge bg-danger ms-1">Admin</span>{% endif %}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="{{ url_for('dashboard.dashboard_home') }}"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}"><i class="bi bi-person me-2"></i>My profile</a></li>
+                                {% if current_user.is_staff %}
+                                <li><a class="dropdown-item" href="{{ url_for('blog.create') }}"><i class="bi bi-pencil-square me-2"></i>Write article</a></li>
+                                {% endif %}
+                                {% if current_user.is_admin %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ url_for('admin.users') }}"><i class="bi bi-people me-2"></i>Manage users</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('blog.categories') }}"><i class="bi bi-tags me-2"></i>Blog categories</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('forum.boards') }}"><i class="bi bi-kanban me-2"></i>Forum boards</a></li>
+                                {% endif %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form method="POST" action="{{ url_for('auth.logout') }}" class="px-3 py-1">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-link dropdown-item p-0 text-danger"><i class="bi bi-box-arrow-right me-2"></i>Log out</button>
+                                    </form>
+                                </li>
+                            </ul>
                         </li>
                     {% else %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="/login">Login</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/register">Register</a>
-                        </li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.login') }}">Log in</a></li>
+                        <li class="nav-item"><a class="btn btn-gold btn-sm ms-lg-2" href="{{ url_for('auth.register') }}">Get started</a></li>
                     {% endif %}
                 </ul>
             </div>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <div class="container mt-4">
+    <!-- Flash messages -->
+    <div class="container mt-3" id="flash-container">
         {% with messages = get_flashed_messages(with_categories=True) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
         {% endwith %}
-        {% block content %}{% endblock %}
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Main content -->
+    <main id="main-content" class="flex-grow-1">
+        {% block hero %}{% endblock %}
+        <div class="container {% block container_class %}my-4{% endblock %}">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-navy text-light mt-auto pt-5 pb-3">
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <h5 class="fw-bold"><i class="bi bi-bank2 text-gold"></i> {{ site_name }}</h5>
+                    <p class="text-light-50 small">Clear, practical legal guidance from experienced lawyers - plus a community and an AI assistant available around the clock.</p>
+                </div>
+                <div class="col-6 col-md-2">
+                    <h6 class="text-gold">Explore</h6>
+                    <ul class="list-unstyled small">
+                        <li><a href="{{ url_for('main.services') }}">Services</a></li>
+                        <li><a href="{{ url_for('blog.index') }}">Blog</a></li>
+                        <li><a href="{{ url_for('forum.index') }}">Forum</a></li>
+                        <li><a href="{{ url_for('chat.page') }}">AI Assistant</a></li>
+                    </ul>
+                </div>
+                <div class="col-6 col-md-2">
+                    <h6 class="text-gold">Company</h6>
+                    <ul class="list-unstyled small">
+                        <li><a href="{{ url_for('main.about') }}">About us</a></li>
+                        <li><a href="{{ url_for('main.contact') }}">Contact</a></li>
+                        <li><a href="{{ url_for('main.privacy') }}">Privacy</a></li>
+                        <li><a href="{{ url_for('main.terms') }}">Terms</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h6 class="text-gold">Important</h6>
+                    <p class="small text-light-50">Content on this site, including forum replies and the AI assistant, is general information and does not constitute legal advice or create a lawyer-client relationship.</p>
+                </div>
+            </div>
+            <hr class="border-secondary">
+            <div class="d-flex flex-wrap justify-content-between small text-light-50">
+                <span>&copy; {{ current_year }} {{ site_name }}. All rights reserved.</span>
+                <span>{{ contact_email }}</span>
+            </div>
+        </div>
+    </footer>
+
+    {% if request.blueprint != 'chat' %}
+    <!-- Floating AI chat widget -->
+    <div id="chat-widget" class="chat-widget" data-history-url="{{ url_for('chat.history') }}" data-message-url="{{ url_for('chat.send_message') }}" data-reset-url="{{ url_for('chat.reset') }}">
+        <button class="chat-widget-toggle btn btn-gold shadow" type="button" aria-label="Open AI legal assistant" aria-expanded="false">
+            <i class="bi bi-chat-dots-fill"></i>
+        </button>
+        <div class="chat-widget-panel shadow-lg" hidden>
+            <div class="chat-widget-header bg-navy text-light d-flex justify-content-between align-items-center px-3 py-2">
+                <span><i class="bi bi-robot text-gold me-1"></i> Legal Assistant</span>
+                <div>
+                    <a href="{{ url_for('chat.page') }}" class="btn btn-sm btn-link text-light" title="Open full chat"><i class="bi bi-arrows-angle-expand"></i></a>
+                    <button type="button" class="btn btn-sm btn-link text-light chat-widget-close" aria-label="Close chat"><i class="bi bi-x-lg"></i></button>
+                </div>
+            </div>
+            <div class="chat-messages p-3" data-chat-messages></div>
+            <form class="chat-form d-flex gap-2 p-2 border-top" data-chat-form>
+                <input type="text" class="form-control form-control-sm" name="message" placeholder="Ask a legal question…" autocomplete="off" maxlength="4000" required>
+                <button class="btn btn-navy btn-sm" type="submit" aria-label="Send"><i class="bi bi-send"></i></button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+    {% block scripts %}{% endblock %}
 </body>
 </html>
