@@ -96,7 +96,8 @@ class User(db.Model, UserMixin):
         return self.full_name or self.username
 
     @property
-    def is_active(self) -> bool:  # Flask-Login hook: inactive users cannot log in
+    def is_active(self) -> bool:
+        """Flask-Login hook: deactivated accounts cannot log in or keep a session."""
         return bool(self.active)
 
     def mark_verified(self):

@@ -78,8 +78,11 @@ def role_required(*roles):
     """Restrict a view to users whose ``role`` is in ``roles`` (403 otherwise)."""
 
     def decorator(view):
+        """Wrap ``view`` with the role check."""
+
         @wraps(view)
         def wrapped(*args, **kwargs):
+            """Authenticate, authorise, then call the view."""
             if not current_user.is_authenticated:
                 # Let Flask-Login handle the redirect to the login page.
                 from app.extensions import login_manager  # pylint: disable=import-outside-toplevel

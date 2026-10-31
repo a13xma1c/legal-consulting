@@ -49,6 +49,7 @@ def _init_extensions(app):
 def _register_security_headers(app):
     @app.after_request
     def set_security_headers(response):
+        """Attach defensive HTTP headers to every response."""
         headers = response.headers
         headers.setdefault("X-Content-Type-Options", "nosniff")
         headers.setdefault("X-Frame-Options", "DENY")
@@ -117,6 +118,7 @@ def _register_template_helpers(app):
 
     @app.context_processor
     def inject_globals():
+        """Values available in every template."""
         return {
             "site_name": app.config.get("SITE_NAME", "LexCounsel"),
             "contact_email": app.config.get("CONTACT_EMAIL", ""),
