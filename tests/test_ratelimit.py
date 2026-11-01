@@ -230,3 +230,53 @@ class TestLoginCountsFailuresOnly:
         for _ in range(2):
             client.post("/login", data={"identifier": "ghost", "password": "x"})
         assert client.post("/login", data={"identifier": "ghost", "password": "x"}).status_code == 429
+
+
+class TestAtomicReservation:
+    def test_release_hands_back_latest_hit(self) -> None:
+        limiter = RateLimiter(limit=1, window=10)
+        assert limiter.allow("k", now=0.0)
+        assert not limiter.allow("k", now=1.0)
+        limiter.release("k")
+        assert limiter.allow("k", now=2.0)
+        limiter.release("missing")  # no-op for unknown keys
+
+    def test_check_limits_releases_actor_when_ip_ceiling_refuses(self, app: Flask) -> None:
+        from app.services.ratelimit import (  # pylint: disable=import-outside-toplevel
+            check_limits,
+            get_limiter,
+        )
+        app.config["LOGIN_IP_RATE_LIMIT"] = 1
+        app.extensions.pop("rate_limiters", None)
+        with app.test_request_context("/", environ_base={"REMOTE_ADDR": "10.0.0.7"}):
+            assert check_limits("login", "user:1") == 0
+            assert check_limits("login", "user:2") > 0  # IP ceiling hit
+            assert get_limiter("login").retry_after("user:2") == 0  # user:2 not charged
+
+    def test_successful_login_does_not_consume_ip_ceiling(self, app: Flask, client: FlaskClient,
+                                                          auth: AuthActions, client_user: User) -> None:
+        app.config["LOGIN_IP_RATE_LIMIT"] = 2
+        app.extensions.pop("rate_limiters", None)
+        for _ in range(5):  # far more successes than the IP ceiling
+            assert b"Welcome back" in auth.login(client_user).data
+            auth.logout()
+
+    def test_attempt_is_reserved_before_password_check(self, app: Flask, client: FlaskClient,
+                                                       client_user: User) -> None:
+        """The limit must be charged before bcrypt runs, closing the check-then-record race."""
+        from unittest import mock  # pylint: disable=import-outside-toplevel
+
+        from app.services.ratelimit import get_limiter  # pylint: disable=import-outside-toplevel
+        app.config["LOGIN_RATE_LIMIT"] = 3
+        app.extensions.pop("rate_limiters", None)
+        seen: list[int] = []
+
+        def spy(*args: object, **kwargs: object) -> bool:
+            seen.append(get_limiter("login").retry_after(f"user:{client_user.id}"))
+            return False
+
+        with mock.patch("app.routes.auth_routes.bcrypt.check_password_hash", side_effect=spy):
+            for _ in range(3):
+                client.post("/login", data={"identifier": "jordan", "password": "wrong"})
+        # On the third (last allowed) attempt the bucket was already full when bcrypt ran.
+        assert seen[-1] > 0

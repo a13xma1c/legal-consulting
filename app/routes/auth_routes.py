@@ -28,7 +28,7 @@ from app.forms import (
 )
 from app.models import Post, Thread, User
 from app.services.mail import get_mailer
-from app.services.ratelimit import check_limits, clear_failures, peek_limits, record_failure
+from app.services.ratelimit import check_limits, forgive_attempt
 from app.services.tokens import (
     generate_reset_token,
     generate_verification_token,
@@ -187,11 +187,12 @@ def login():
         user = User.query.filter(
             or_(User.email.ilike(identifier), User.username.ilike(identifier))
         ).first()
-        # Key on the *account* (username and e-mail share one bucket). Only failed attempts
-        # count, so legitimate users - or many people behind one IP - are never locked out
-        # by successful logins.
+        # Key on the *account* (username and e-mail share one bucket). The attempt is
+        # reserved atomically *before* the (slow) password check so concurrent guesses
+        # cannot slip past the limit; a successful login forgives it, so legitimate users
+        # - or many people behind one IP - are never locked out by successful logins.
         account_key = f"user:{user.id}" if user else f"unknown:{identifier.lower()}"
-        if peek_limits("login", account_key):
+        if check_limits("login", account_key):
             flash("Too many login attempts. Please wait a few minutes and try again.", "danger")
             return render_template("auth/login.html", form=form), 429
         if user and bcrypt.check_password_hash(user.password, form.password.data):
@@ -208,14 +209,13 @@ def login():
                     "warning",
                 )
                 return render_template("auth/login.html", form=form)
-            clear_failures("login", account_key)
+            forgive_attempt("login", account_key)
             login_user(user, remember=form.remember.data)
             flash(f"Welcome back, {user.display_name}!", "success")
             next_page = request.args.get("next")
             if _is_safe_redirect(next_page):
                 return redirect(next_page)
             return redirect(url_for("dashboard.dashboard_home"))
-        record_failure("login", account_key)
         flash("Login failed. Please check your details and try again.", "danger")
     return render_template("auth/login.html", form=form)
 

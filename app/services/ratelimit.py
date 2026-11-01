@@ -57,9 +57,12 @@ class RateLimiter:
         for stale in [k for k, h in self._hits.items() if not h or h[-1] <= cutoff]:
             del self._hits[stale]
 
-    def is_limited(self, key: str, now: Optional[float] = None) -> bool:
-        """Peek: would a hit for ``key`` be refused right now? (Records nothing.)"""
-        return self.retry_after(key, now) > 0
+    def release(self, key: str) -> None:
+        """Give back the most recent hit for ``key`` (e.g. an attempt that turned out fine)."""
+        with self._lock:
+            hits = self._hits.get(key)
+            if hits:
+                hits.pop()
 
     def retry_after(self, key: str, now: Optional[float] = None) -> int:
         """Seconds until ``key`` may make another request (0 if it can right now)."""
@@ -107,31 +110,13 @@ def client_key() -> str:
     return request.remote_addr or "unknown"
 
 
-def peek_limits(name: str, actor_key: str) -> int:
-    """Like :func:`check_limits` but without recording a hit (for failure-only counting)."""
-    ip = client_key()
-    actor = get_limiter(name)
-    ceiling = get_limiter(f"{name}_ip")
-    if actor.is_limited(actor_key):
-        return actor.retry_after(actor_key)
-    if ceiling.is_limited(ip):
-        return ceiling.retry_after(ip)
-    return 0
-
-
-def record_failure(name: str, actor_key: str) -> None:
-    """Count one failed attempt against both tiers of limit ``name``."""
-    get_limiter(name).allow(actor_key)
-    get_limiter(f"{name}_ip").allow(client_key())
-
-
-def clear_failures(name: str, actor_key: str) -> None:
-    """Forget an actor's failed attempts (e.g. after a successful login)."""
-    get_limiter(name).reset(actor_key)
-
-
 def check_limits(name: str, actor_key: str) -> int:
     """Apply the two-tier limit ``name``: per actor, then the per-IP ceiling.
+
+    The attempt is recorded *atomically* before the caller does its work, so the
+    limit is exact even when many requests race (a check-then-record design would
+    let ``concurrency x latency`` extra attempts through). Callers whose attempt
+    turns out to be legitimate can hand it back with :func:`forgive_attempt`.
 
     Returns 0 when the request is allowed, otherwise the number of seconds the
     caller should wait (for a ``Retry-After`` header).
@@ -139,11 +124,19 @@ def check_limits(name: str, actor_key: str) -> int:
     ip = client_key()
     actor = get_limiter(name)
     ceiling = get_limiter(f"{name}_ip")
-    if not actor.allow(f"{actor_key}"):
-        return actor.retry_after(f"{actor_key}")
+    if not actor.allow(actor_key):
+        return actor.retry_after(actor_key)
     if not ceiling.allow(ip):
+        actor.release(actor_key)  # the actor did not get through either
         return ceiling.retry_after(ip)
     return 0
+
+
+def forgive_attempt(name: str, actor_key: str) -> None:
+    """Undo the accounting of a successful attempt: clear the actor's failures and
+    hand back this request's share of the per-IP ceiling."""
+    get_limiter(name).reset(actor_key)
+    get_limiter(f"{name}_ip").release(client_key())
 
 
 def reset_all() -> None:
