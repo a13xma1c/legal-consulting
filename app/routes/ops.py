@@ -5,6 +5,7 @@ from sqlalchemy import text
 
 from app.extensions import db
 from app.models import Board, Post, Thread
+from app.services.ratelimit import get_redis
 
 ops = Blueprint("ops", __name__)
 
@@ -20,7 +21,17 @@ def healthz():
         current_app.logger.exception("Health check failed")
         database = "error"
         status = 503
-    return jsonify({"status": "ok" if status == 200 else "degraded", "database": database}), status
+    payload = {"status": "ok" if status == 200 else "degraded", "database": database}
+    if current_app.config.get("REDIS_URL"):
+        try:
+            get_redis().ping()
+            payload["redis"] = "ok"
+        except Exception:  # pylint: disable=broad-exception-caught
+            current_app.logger.exception("Redis health check failed")
+            payload["redis"] = "error"
+            payload["status"] = "degraded"
+            status = 503
+    return jsonify(payload), status
 
 
 @ops.route("/robots.txt")

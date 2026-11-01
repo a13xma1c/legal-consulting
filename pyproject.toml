@@ -18,6 +18,7 @@ dependencies = [
     "gunicorn>=21.0",
     "werkzeug>=3.1",
     "flask-migrate>=4.1.0",
+    "redis>=5",
 ]
 
 [dependency-groups]
@@ -30,6 +31,7 @@ dev = [
     "playwright>=1.56",
     "types-requests>=2.33.0.20261006",
     "requests>=2.32",
+    "fakeredis[lua]>=2.20",
 ]
 stress = [
     "locust>=2.20",

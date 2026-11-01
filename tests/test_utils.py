@@ -116,3 +116,9 @@ class TestCanModify:
         with app.test_request_context():
             login_user(admin_user)
             assert can_modify(client_user.id) is True
+
+
+def test_urls_inside_code_are_not_linkified() -> None:
+    html = str(render_markdown("Run `curl https://example.com` and see https://example.org"))
+    assert 'href="https://example.org"' in html
+    assert "<code>curl https://example.com</code>" in html

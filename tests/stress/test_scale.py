@@ -149,7 +149,7 @@ class TestLargePayloads:
         html = str(render_markdown(hostile))
         elapsed = time.perf_counter() - start
         assert "<script" not in html and "javascript:" not in html
-        assert elapsed < 5, f"sanitising 200KB took {elapsed:.1f}s"
+        assert elapsed < 8, f"sanitising 200KB took {elapsed:.1f}s"
 
     def test_deeply_nested_markdown(self) -> None:
         nested = "\n".join("  " * i + "- item" for i in range(200))

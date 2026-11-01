@@ -2,10 +2,12 @@
 
 import re
 import unicodedata
-from functools import wraps
+from functools import partial, wraps
 
 import bleach
 import markdown as md
+from bleach.linkifier import LinkifyFilter
+from bleach.sanitizer import Cleaner
 from flask import abort
 from flask_login import current_user
 from markupsafe import Markup
@@ -27,6 +29,16 @@ ALLOWED_ATTRIBUTES = {
     "code": ["class"],
 }
 ALLOWED_PROTOCOLS = ["http", "https", "mailto"]
+
+# One parser pass does both sanitising and auto-linking (running ``bleach.linkify``
+# separately would parse the whole document a second time).
+_CLEANER = Cleaner(
+    tags=ALLOWED_TAGS,
+    attributes=ALLOWED_ATTRIBUTES,
+    protocols=ALLOWED_PROTOCOLS,
+    strip=True,
+    filters=[partial(LinkifyFilter, skip_tags={"pre", "code"})],
+)
 
 
 def slugify(value: str, max_length: int = 80) -> str:
@@ -63,15 +75,7 @@ def render_markdown(text: str) -> Markup:
         extensions=["fenced_code", "tables", "nl2br", "sane_lists"],
         output_format="html",
     )
-    cleaned = bleach.clean(
-        html,
-        tags=ALLOWED_TAGS,
-        attributes=ALLOWED_ATTRIBUTES,
-        protocols=ALLOWED_PROTOCOLS,
-        strip=True,
-    )
-    cleaned = bleach.linkify(cleaned)
-    return Markup(cleaned)
+    return Markup(_CLEANER.clean(html))
 
 
 def role_required(*roles):

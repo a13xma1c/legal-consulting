@@ -280,3 +280,12 @@ class TestAtomicReservation:
                 client.post("/login", data={"identifier": "jordan", "password": "wrong"})
         # On the third (last allowed) attempt the bucket was already full when bcrypt ran.
         assert seen[-1] > 0
+
+
+def test_memory_prune_drops_emptied_deques() -> None:
+    limiter = RateLimiter(limit=2, window=10)
+    limiter.allow("k", now=0.0)
+    limiter.release("k")  # deque now empty but key retained
+    assert limiter.tracked_keys == 1
+    limiter.allow("other", now=20.0)  # sweep: empty deque is pruned
+    assert limiter.tracked_keys == 1
