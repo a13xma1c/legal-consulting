@@ -5,6 +5,8 @@ Select a configuration with the ``FLASK_CONFIG`` environment variable
 a config name or class directly, which is what the test-suite uses.
 """
 
+from __future__ import annotations
+
 import os
 
 
@@ -55,6 +57,14 @@ class Config:
     EMAIL_IP_RATE_LIMIT = int(os.getenv("EMAIL_IP_RATE_LIMIT", "200"))
     EMAIL_IP_RATE_WINDOW = int(os.getenv("EMAIL_IP_RATE_WINDOW", "3600"))
 
+    # Shared state for horizontal scaling. With REDIS_URL set, rate limits are enforced
+    # globally across all workers/hosts instead of per process.
+    REDIS_URL = os.getenv("REDIS_URL")
+    REDIS_TIMEOUT = float(os.getenv("REDIS_TIMEOUT", "2"))
+    RATE_LIMIT_STORAGE = os.getenv("RATE_LIMIT_STORAGE", "auto")  # auto | memory | redis
+    RATE_LIMIT_PREFIX = os.getenv("RATE_LIMIT_PREFIX", "lexcounsel:rl")
+    RATE_LIMIT_FAIL_OPEN = os.getenv("RATE_LIMIT_FAIL_OPEN", "true").lower() in ("1", "true", "yes")
+
     # Behind a reverse proxy (nginx, Heroku router, ...) set this to the number of
     # proxies so X-Forwarded-* headers are trusted and per-IP limits see real clients.
     PROXY_FIX_X_FOR = int(os.getenv("PROXY_FIX_X_FOR", "0"))
@@ -104,6 +114,8 @@ class TestingConfig(Config):
     SQLALCHEMY_DATABASE_URI = "sqlite://"  # in-memory
     WTF_CSRF_ENABLED = False
     AI_PROVIDER = "fallback"
+    REDIS_URL: str | None = None
+    RATE_LIMIT_STORAGE = "memory"
     CHAT_RATE_LIMIT = 1000
     CHAT_IP_RATE_LIMIT = 0
     LOGIN_RATE_LIMIT = 1000

@@ -11,7 +11,7 @@ A full-featured legal consulting website built with Flask:
 | **Accounts** | Register with e-mail verification (signed, expiring links), log in with username *or* e-mail, resend-verification, password reset and change-password flows. E-mail notifications when a lawyer claims or answers a request. |
 | **Admin** | User management: search, change roles, manually verify, deactivate/reactivate accounts. Blog categories and forum boards. |
 | **Security** | Bcrypt passwords, CSRF on forms *and* JSON API, role-based access control, sanitised Markdown (bleach), open-redirect protection, login/e-mail rate limiting, Content-Security-Policy + security headers, secure cookies & HSTS in production. |
-| **Operations** | Alembic migrations (`flask db`), `/healthz` probe, `robots.txt`, `sitemap.xml`, pre-commit hooks. |
+| **Operations** | Alembic migrations (`flask db`), `/healthz` probe, `robots.txt`, `sitemap.xml`, pre-commit hooks. Redis-backed rate limiting for horizontal scaling. |
 | **Testing** | 380+ fully type-annotated pytest tests (mypy-checked): unit, integration and Playwright browser end-to-end. 100% line coverage, pylint 10/10, GitHub Actions CI (uv) on Python 3.10–3.12. |
 
 ## Quick start
@@ -74,6 +74,9 @@ All settings are environment variables (see `.env.example`):
 | `CHAT_RATE_LIMIT` / `CHAT_RATE_WINDOW` | `90` / `300` | Messages per **conversation** (session or user) per window |
 | `CHAT_IP_RATE_LIMIT` / `CHAT_IP_RATE_WINDOW` | `6000` / `300` | Abuse ceiling per IP - generous because many users share IPs (NAT, proxies); `0` disables |
 | `PROXY_FIX_X_FOR` | `0` | Number of reverse proxies in front of the app; set to `1` behind nginx/Heroku so per-IP limits see real client addresses |
+| `REDIS_URL` | unset | When set, rate limits are shared across all workers and hosts (see *Horizontal scaling*) |
+| `RATE_LIMIT_STORAGE` | `auto` | `auto` (Redis if `REDIS_URL` is set), `memory`, or `redis` (error if no URL) |
+| `RATE_LIMIT_FAIL_OPEN` | `true` | If Redis is unreachable, allow requests and log the outage (`false` = refuse) |
 | `MAIL_SERVER`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_USE_TLS`, `MAIL_DEFAULT_SENDER` | unset | SMTP for verification e-mails. If `MAIL_SERVER` is unset, messages are logged to the console (and, in development, the link is shown in the UI). |
 | `VERIFY_TOKEN_MAX_AGE` / `RESET_TOKEN_MAX_AGE` | `86400` / `3600` | Lifetime of verification / password-reset links |
 | `LOGIN_RATE_LIMIT` / `LOGIN_RATE_WINDOW` | `10` / `300` | **Failed** login attempts per account per window (cleared on success); `LOGIN_IP_RATE_LIMIT` (`500`) is the per-IP ceiling |
@@ -211,6 +214,25 @@ uv run flask --app wsgi run &            # or point --host at a staging server
 uv run locust -f locustfile.py --host http://127.0.0.1:5000            # web UI on :8089
 uv run locust -f locustfile.py --host http://127.0.0.1:5000 --headless -u 50 -r 5 -t 2m --csv=load
 ```
+
+## Horizontal scaling
+
+The application is stateless apart from rate-limit counters: sessions are signed cookies, chat
+history and everything else lives in the database. To run more than one worker or host:
+
+1. **Use a shared database** - SQLite is single-host; set `DATABASE_URL` to PostgreSQL.
+2. **Set `REDIS_URL`** - rate limits (chat, login brute-force, e-mail) then live in Redis and are
+   enforced globally. Each check is a single Lua script (sorted-set sliding window), so the limit
+   is exact even when requests race across processes. Without Redis every process keeps its own
+   counters, which effectively multiplies the limits by the number of workers.
+3. **Set `PROXY_FIX_X_FOR=1`** behind a load balancer so per-IP limits see real client addresses.
+4. Scale workers with `WEB_CONCURRENCY` / `GUNICORN_THREADS` (see `Procfile`).
+
+If Redis becomes unreachable the limiter fails open by default (requests are served, the outage is
+logged and `/healthz` reports `"redis": "error"` with HTTP 503); set `RATE_LIMIT_FAIL_OPEN=false` to
+fail closed instead. The test-suite exercises the Redis backend through `fakeredis` (Lua included)
+and, when `REDIS_URL` is set - as in CI - against a real server; a stress test runs two independent
+HTTP servers sharing one Redis and asserts the login limit is exact across the cluster.
 
 ## Deployment
 

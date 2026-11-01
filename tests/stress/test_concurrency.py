@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 import requests
 from flask import Flask
 from sqlalchemy import select
@@ -9,9 +10,9 @@ from sqlalchemy import select
 from app.extensions import db
 from app.models import ChatSession, Thread, User
 from app.services.ratelimit import RateLimiter
-from tests.stress.conftest import LiveServer, assert_all, login, run_concurrently
+from tests.stress.conftest import DEMO_PASSWORD, LiveServer, assert_all, login, run_concurrently
 
-pytestmark = __import__("pytest").mark.stress
+pytestmark = pytest.mark.stress
 
 THREAD_SLUG = "landlord-keeping-my-whole-deposit-for-cleaning"
 
@@ -163,3 +164,66 @@ def test_concurrent_replies_all_persist(live_server: LiveServer, fresh_db: Flask
         assert thread.reply_count == 1 + 60  # seed reply + ours
         assert thread.last_activity is not None and before is not None
         assert thread.last_activity >= before
+
+
+def test_login_limit_exact_across_two_servers_sharing_redis(
+        tmp_path_factory: pytest.TempPathFactory) -> None:
+    """Horizontal scaling: two independent servers + one Redis = one exact global limit.
+
+    Each server is a separate app instance with its own threaded HTTP listener (as two
+    Gunicorn workers or two hosts would be). 40 concurrent wrong-password attempts spread
+    across both must yield exactly LOGIN_RATE_LIMIT processed attempts in total.
+    """
+    import threading  # pylint: disable=import-outside-toplevel
+
+    import fakeredis  # pylint: disable=import-outside-toplevel
+    from werkzeug.serving import make_server  # pylint: disable=import-outside-toplevel
+
+    from app import create_app  # pylint: disable=import-outside-toplevel
+    from app.cli import seed_database  # pylint: disable=import-outside-toplevel
+    from app.extensions import db  # pylint: disable=import-outside-toplevel
+    from config import TestingConfig  # pylint: disable=import-outside-toplevel
+
+    shared_redis = fakeredis.FakeServer()
+    db_file = tmp_path_factory.mktemp("cluster") / "cluster.db"
+
+    class ClusterConfig(TestingConfig):
+        SQLALCHEMY_DATABASE_URI = f"sqlite:///{db_file}"
+        REDIS_URL = "redis://fake"
+        RATE_LIMIT_STORAGE = "auto"
+        LOGIN_RATE_LIMIT = 10
+        LOGIN_IP_RATE_LIMIT = 0
+
+    servers, urls, threads = [], [], []
+    for index in range(2):
+        application = create_app(ClusterConfig)
+        application.extensions["redis"] = fakeredis.FakeRedis(server=shared_redis)
+        if index == 0:
+            with application.app_context():
+                db.drop_all()
+                db.create_all()
+                seed_database(DEMO_PASSWORD)
+        server = make_server("127.0.0.1", 0, application, threaded=True)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        servers.append(server)
+        threads.append(thread)
+        urls.append(f"http://127.0.0.1:{server.server_port}")
+
+    try:
+        def attempt(i: int) -> int:
+            return requests.post(f"{urls[i % 2]}/login",
+                                 data={"identifier": "jordan", "password": "wrong"},
+                                 timeout=30).status_code
+
+        statuses = run_concurrently(attempt, 40, 20)
+        assert statuses.count(200) == 10, f"expected exactly 10 across the cluster: {statuses}"
+        assert statuses.count(429) == 30
+        # The lock-out is global: the *other* server refuses even the right password.
+        assert requests.post(f"{urls[1]}/login", data={"identifier": "jordan",
+                                                       "password": DEMO_PASSWORD},
+                             timeout=30).status_code == 429
+    finally:
+        for server, thread in zip(servers, threads):
+            server.shutdown()
+            thread.join(timeout=5)
