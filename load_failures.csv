@@ -1,0 +1,18 @@
+Method,Name,Error,Occurrences,First Seen,Last Seen
+GET,/healthz,HTTPError('403 Client Error: Forbidden for url: /healthz'),37,2026-11-01T04:31:09Z,2026-11-01T04:32:00Z
+POST,/chat/api/message,HTTPError('403 Client Error: Forbidden for url: /chat/api/message'),318,2026-11-01T04:31:08Z,2026-11-01T04:32:00Z
+GET,/services,HTTPError('403 Client Error: Forbidden for url: /services'),25,2026-11-01T04:31:13Z,2026-11-01T04:32:01Z
+GET,/forum/search?q=,HTTPError('403 Client Error: Forbidden for url: /forum/search?q='),80,2026-11-01T04:31:11Z,2026-11-01T04:32:00Z
+POST,/login [POST],HTTPError('403 Client Error: Forbidden for url: /login [POST]'),20,2026-11-01T04:31:08Z,2026-11-01T04:31:17Z
+GET,/consultations/1,HTTPError('403 Client Error: Forbidden for url: /consultations/1'),89,2026-11-01T04:31:08Z,2026-11-01T04:32:01Z
+GET,/chat/api/history,HTTPError('403 Client Error: Forbidden for url: /chat/api/history'),131,2026-11-01T04:31:09Z,2026-11-01T04:32:00Z
+GET,/forum/,HTTPError('403 Client Error: Forbidden for url: /forum/'),139,2026-11-01T04:31:08Z,2026-11-01T04:32:01Z
+GET,/about,HTTPError('403 Client Error: Forbidden for url: /about'),26,2026-11-01T04:31:08Z,2026-11-01T04:31:56Z
+GET,/dashboard,HTTPError('403 Client Error: Forbidden for url: /dashboard'),150,2026-11-01T04:31:09Z,2026-11-01T04:32:01Z
+GET,/blog/,HTTPError('403 Client Error: Forbidden for url: /blog/'),125,2026-11-01T04:31:08Z,2026-11-01T04:32:00Z
+GET,/profile,HTTPError('403 Client Error: Forbidden for url: /profile'),25,2026-11-01T04:31:10Z,2026-11-01T04:31:58Z
+GET,/dashboard?status=,HTTPError('403 Client Error: Forbidden for url: /dashboard?status='),54,2026-11-01T04:31:10Z,2026-11-01T04:32:01Z
+GET,/,HTTPError('403 Client Error: Forbidden for url: /'),65,2026-11-01T04:31:08Z,2026-11-01T04:31:59Z
+GET,/login [GET],HTTPError('403 Client Error: Forbidden for url: /login [GET]'),20,2026-11-01T04:31:08Z,2026-11-01T04:31:17Z
+GET,/blog/?q=,HTTPError('403 Client Error: Forbidden for url: /blog/?q='),62,2026-11-01T04:31:11Z,2026-11-01T04:32:00Z
+GET,/chat/,HTTPError('403 Client Error: Forbidden for url: /chat/'),57,2026-11-01T04:31:08Z,2026-11-01T04:32:00Z
