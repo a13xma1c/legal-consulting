@@ -1,6 +1,7 @@
 """Public pages: home, about, services, contact."""
 
 from flask import Blueprint, current_app, flash, redirect, render_template, url_for
+from sqlalchemy.orm import joinedload
 
 from app.forms import ContactForm
 from app.models import PRACTICE_AREAS, Post, Role, Thread, User
@@ -10,37 +11,37 @@ main = Blueprint("main", __name__)
 SERVICES = [
     {
         "slug": "family",
-        "icon": "bi-people",
+        "icon": "group",
         "title": "Family Law",
         "blurb": "Divorce, separation, custody and financial settlements handled with care.",
     },
     {
         "slug": "property",
-        "icon": "bi-house-door",
+        "icon": "home_work",
         "title": "Property & Real Estate",
         "blurb": "Conveyancing, leases, boundary disputes and landlord-tenant matters.",
     },
     {
         "slug": "employment",
-        "icon": "bi-briefcase",
+        "icon": "work",
         "title": "Employment Law",
         "blurb": "Unfair dismissal, contracts, discrimination and workplace disputes.",
     },
     {
         "slug": "business",
-        "icon": "bi-building",
+        "icon": "domain",
         "title": "Business & Corporate",
         "blurb": "Company formation, shareholder agreements and commercial contracts.",
     },
     {
         "slug": "wills",
-        "icon": "bi-journal-text",
+        "icon": "description",
         "title": "Wills, Trusts & Estates",
         "blurb": "Estate planning, probate and inheritance disputes.",
     },
     {
         "slug": "criminal",
-        "icon": "bi-shield-check",
+        "icon": "shield",
         "title": "Criminal Defence",
         "blurb": "Robust representation from first police contact through to trial.",
     },
@@ -51,12 +52,18 @@ SERVICES = [
 def home():
     """Landing page with latest posts, active threads and featured lawyers."""
     latest_posts = (
-        Post.query.filter_by(published=True)
+        Post.query.options(joinedload(Post.author), joinedload(Post.category))
+        .filter_by(published=True)
         .order_by(Post.created_at.desc())
         .limit(3)
         .all()
     )
-    active_threads = Thread.query.order_by(Thread.last_activity.desc()).limit(5).all()
+    active_threads = (
+        Thread.query.options(joinedload(Thread.board))
+        .order_by(Thread.last_activity.desc())
+        .limit(5)
+        .all()
+    )
     lawyers = User.query.filter_by(role=Role.LAWYER).order_by(User.id).limit(4).all()
     return render_template(
         "main/home.html",

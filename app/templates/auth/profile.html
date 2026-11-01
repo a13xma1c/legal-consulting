@@ -7,7 +7,7 @@
         <div class="d-flex align-items-center gap-3 mb-4">
             {{ avatar(current_user, 64) }}
             <div>
-                <h2 class="fw-bold mb-0">{{ current_user.display_name }}</h2>
+                <h2 class="mb-0">{{ current_user.display_name }}</h2>
                 <div class="text-muted">@{{ current_user.username }} · {{ current_user.role|capitalize }} · {{ current_user.email }}</div>
             </div>
         </div>
@@ -18,9 +18,9 @@
                     {{ render_field(form.full_name) }}
                     {% if current_user.is_lawyer %}{{ render_field(form.specialisation, placeholder="e.g. Family & Property Law") }}{% endif %}
                     {{ render_field(form.bio, rows=5) }}
-                    <button type="submit" class="btn btn-navy">{{ form.submit.label.text }}</button>
-                    <a href="{{ url_for('auth.public_profile', username=current_user.username) }}" class="btn btn-link">View public profile</a>
-                    <a href="{{ url_for('auth.change_password') }}" class="btn btn-link"><i class="bi bi-key"></i> Change password</a>
+                    <button type="submit" class="btn btn-filled">{{ form.submit.label.text }}</button>
+                    <a href="{{ url_for('auth.public_profile', username=current_user.username) }}" class="btn btn-text">View public profile</a>
+                    <a href="{{ url_for('auth.change_password') }}" class="btn btn-text">{{ icon('key') }} Change password</a>
                 </form>
             </div>
         </div>

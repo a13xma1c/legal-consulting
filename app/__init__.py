@@ -23,6 +23,13 @@ def create_app(config=None):
         config = CONFIG_MAP[config]
     app.config.from_object(config)
 
+    if app.config.get("PROXY_FIX_X_FOR", 0) > 0:
+        # pylint: disable=import-outside-toplevel
+        from werkzeug.middleware.proxy_fix import ProxyFix
+
+        hops = app.config["PROXY_FIX_X_FOR"]
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=hops, x_proto=hops, x_host=hops)
+
     _init_extensions(app)
     _register_blueprints(app)
     _register_template_helpers(app)
@@ -39,11 +46,34 @@ def create_app(config=None):
 
 
 def _init_extensions(app):
+    if app.config["SQLALCHEMY_DATABASE_URI"].startswith("sqlite"):
+        # Wait for locks instead of failing, and use WAL so readers never block writers.
+        options = app.config.setdefault("SQLALCHEMY_ENGINE_OPTIONS", {})
+        options.setdefault("connect_args", {}).setdefault("timeout", 30)
     db.init_app(app)
     migrate.init_app(app, db)
+    with app.app_context():
+        _configure_sqlite(db.engine)
     bcrypt.init_app(app)
     login_manager.init_app(app)
     csrf.init_app(app)
+
+
+def _configure_sqlite(engine):
+    """Enable WAL + busy timeout on every SQLite connection (no-op for other databases)."""
+    if engine.dialect.name != "sqlite":
+        return
+
+    from sqlalchemy import event  # pylint: disable=import-outside-toplevel
+
+    @event.listens_for(engine, "connect")
+    def _set_pragmas(dbapi_connection, _record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA busy_timeout = 30000")
+        if engine.url.database and engine.url.database != ":memory:":
+            cursor.execute("PRAGMA journal_mode = WAL")
+            cursor.execute("PRAGMA synchronous = NORMAL")
+        cursor.close()
 
 
 def _register_security_headers(app):
@@ -89,10 +119,21 @@ def _register_template_helpers(app):
     # pylint: disable=import-outside-toplevel
     from datetime import datetime, timezone
 
+    from markupsafe import Markup, escape
+
     from app.utils import excerpt, render_markdown
 
     app.jinja_env.filters["markdown"] = render_markdown
     app.jinja_env.filters["excerpt"] = excerpt
+
+    @app.template_global("icon")
+    def icon(name, cls="", label=None):
+        """Render a Material Symbols icon (ligature). Decorative unless ``label`` is given."""
+        aria = f' role="img" aria-label="{escape(label)}"' if label else ' aria-hidden="true"'
+        return Markup(
+            f'<span class="material-symbols-outlined icon icon-{escape(name)} {escape(cls)}"'
+            f"{aria}>{escape(name)}</span>"
+        )
 
     @app.template_filter("timeago")
     def timeago(value):

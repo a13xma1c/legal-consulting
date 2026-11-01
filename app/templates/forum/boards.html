@@ -2,7 +2,7 @@
 {% from "macros.html" import render_field, post_form %}
 {% block title %}Forum boards - {{ site_name }}{% endblock %}
 {% block content %}
-<h2 class="fw-bold mb-4">Forum boards</h2>
+<h2 class="mb-4">Forum boards</h2>
 <div class="row g-4">
     <div class="col-lg-7">
         <table class="table bg-white shadow-sm align-middle">
@@ -17,12 +17,12 @@
     </div>
     <div class="col-lg-5">
         <div class="card border-0 shadow-sm"><div class="card-body">
-            <h5 class="fw-bold">New board</h5>
+            <h5 class="">New board</h5>
             <form method="POST" novalidate>
                 {{ form.hidden_tag() }}
                 {{ render_field(form.name) }}
                 {{ render_field(form.description) }}
-                <button type="submit" class="btn btn-navy">{{ form.submit.label.text }}</button>
+                <button type="submit" class="btn btn-filled">{{ form.submit.label.text }}</button>
             </form>
         </div></div>
     </div>

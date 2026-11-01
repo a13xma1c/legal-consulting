@@ -117,6 +117,11 @@ def logout(page: Page) -> None:
     submit(page, "nav form[action$='/logout'] button")
 
 
+def wait_for_animations(page: Page) -> None:
+    """Block until every running CSS animation/transition on the page has finished."""
+    page.evaluate("() => Promise.all(document.getAnimations().map((a) => a.finished))")
+
+
 def flash_text(page: Page) -> str:
     """Concatenated text of all flash alerts."""
     return " ".join(page.locator("#flash-container .alert").all_inner_texts())

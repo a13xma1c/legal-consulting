@@ -4,14 +4,14 @@
 {% block content %}
 <div class="row g-5">
     <div class="col-lg-5">
-        <h1 class="fw-bold">Contact us</h1>
+        <h1 class="">Contact us</h1>
         <p class="text-muted">Have a general question, or want to talk about working with us? Send a message and we'll respond within one business day.</p>
-        <ul class="list-unstyled mt-4">
-            <li class="mb-2"><i class="bi bi-envelope text-gold me-2"></i>{{ contact_email }}</li>
-            <li class="mb-2"><i class="bi bi-clock text-gold me-2"></i>Mon-Fri, 9:00-18:00</li>
-            <li class="mb-2"><i class="bi bi-geo-alt text-gold me-2"></i>12 Chancery Row, Suite 400</li>
+        <ul class="list-unstyled mt-4 d-grid gap-3">
+            <li class="d-flex align-items-center gap-3">{{ icon('mail', 'text-gold') }}{{ contact_email }}</li>
+            <li class="d-flex align-items-center gap-3">{{ icon('schedule', 'text-gold') }}Mon-Fri, 9:00-18:00</li>
+            <li class="d-flex align-items-center gap-3">{{ icon('location_on', 'text-gold') }}12 Chancery Row, Suite 400</li>
         </ul>
-        <div class="alert alert-warning small mt-4"><i class="bi bi-exclamation-triangle"></i> Please do not send confidential details through this form. For specific legal matters, <a href="{{ url_for('consultations.create') }}">request a consultation</a> instead.</div>
+        <div class="alert alert-warning small mt-4">{{ icon('warning') }}<div>Please do not send confidential details through this form. For specific legal matters, <a href="{{ url_for('consultations.create') }}">request a consultation</a> instead.</div></div>
     </div>
     <div class="col-lg-7">
         <div class="card border-0 shadow-sm">
@@ -24,7 +24,7 @@
                     </div>
                     {{ render_field(form.subject) }}
                     {{ render_field(form.message, rows=6) }}
-                    <button type="submit" class="btn btn-navy">{{ form.submit.label.text }}</button>
+                    <button type="submit" class="btn btn-filled">{{ form.submit.label.text }}</button>
                 </form>
             </div>
         </div>

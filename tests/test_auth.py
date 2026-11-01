@@ -179,3 +179,19 @@ class TestProfile:
 
     def test_public_profile_404(self, client: FlaskClient) -> None:
         assert client.get("/users/nobody").status_code == 404
+
+
+class TestRegistrationRace:
+    def test_integrity_error_is_handled(self, client: FlaskClient, client_user: User) -> None:
+        """Simulate two requests passing validation simultaneously for the same username."""
+        from unittest import mock  # pylint: disable=import-outside-toplevel
+
+        from sqlalchemy.exc import IntegrityError  # pylint: disable=import-outside-toplevel
+
+        from app.extensions import db  # pylint: disable=import-outside-toplevel
+
+        with mock.patch.object(db.session, "commit", side_effect=IntegrityError("x", {}, Exception())):
+            response = client.post("/register", data={**REGISTRATION, "username": "racer"})
+        assert response.status_code == 409
+        assert b"was just taken" in response.data
+        assert User.query.filter_by(username="racer").first() is None

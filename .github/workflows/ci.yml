@@ -24,12 +24,26 @@ jobs:
     - name: Type-check tests with mypy
       run: uv run mypy
     - name: Unit & integration tests with coverage
-      run: uv run pytest -m "not e2e" -p no:playwright --cov --cov-report=term-missing --cov-report=xml
+      run: uv run pytest -m "not e2e and not stress" -p no:playwright --cov --cov-report=term-missing --cov-report=xml
     - name: Upload coverage report
       uses: actions/upload-artifact@v4
       with:
         name: coverage-${{ matrix.python-version }}
         path: coverage.xml
+
+  stress:
+    name: Stress tests (concurrency, scale, soak)
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        enable-cache: true
+    - name: Install dependencies
+      run: uv sync --locked
+    - name: Run stress tests
+      run: uv run pytest tests/stress -p no:playwright -s
 
   e2e:
     name: Browser tests (Playwright)

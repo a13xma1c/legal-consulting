@@ -3,10 +3,10 @@
 {% block content %}
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
     <div>
-        <h2 class="fw-bold mb-0">Welcome, {{ current_user.display_name }}</h2>
+        <h2 class="mb-0">Welcome, {{ current_user.display_name }}</h2>
         <p class="text-muted mb-0">Track your consultation requests and lawyer responses.</p>
     </div>
-    <a href="{{ url_for('consultations.create') }}" class="btn btn-gold"><i class="bi bi-calendar-plus"></i> New consultation request</a>
+    <a href="{{ url_for('consultations.create') }}" class="btn btn-accent">{{ icon('event') }} New consultation request</a>
 </div>
 
 {% if consultations %}
@@ -24,18 +24,18 @@
             <td>{{ c.lawyer.display_name if c.lawyer else '—' }}</td>
             <td><span class="badge bg-{{ status_badge(c.status) }}">{{ c.status }}</span></td>
             <td class="small text-muted">{{ c.created_at|timeago }}</td>
-            <td><a href="{{ url_for('consultations.detail', consultation_id=c.id) }}" class="btn btn-sm btn-outline-navy">View</a></td>
+            <td><a href="{{ url_for('consultations.detail', consultation_id=c.id) }}" class="btn btn-sm btn-tonal">View</a></td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
 </div>
 {% else %}
-<div class="card border-0 shadow-sm text-center p-5">
-    <i class="bi bi-calendar2-check fs-1 text-gold"></i>
+<div class="card empty-state">
+    {{ icon('event_available') }}
     <h4 class="mt-3">No consultations yet</h4>
     <p class="text-muted">Describe your legal matter and a lawyer will review it. Not ready? Try the <a href="{{ url_for('chat.page') }}">AI assistant</a> first.</p>
-    <div><a href="{{ url_for('consultations.create') }}" class="btn btn-navy">Request a consultation</a></div>
+    <div><a href="{{ url_for('consultations.create') }}" class="btn btn-filled">Request a consultation</a></div>
 </div>
 {% endif %}
 {% endblock %}

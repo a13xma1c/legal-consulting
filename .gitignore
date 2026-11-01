@@ -14,4 +14,3 @@ htmlcov/
 .env
 test-results/
 migrations/__pycache__/
-.idea/

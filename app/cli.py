@@ -67,6 +67,25 @@ def seed_command(password):
         click.echo("Database already contains users - seed skipped.")
 
 
+@cli.cli.command("seed-load-accounts")
+@click.option("--count", default=50, show_default=True, help="Number of client accounts.")
+@click.option("--password", default="password123", show_default=True)
+def seed_load_accounts(count, password):
+    """Create ``loadclient1..N`` verified client accounts for load testing (idempotent)."""
+    created = 0
+    hashed = _hash(password)
+    for i in range(1, count + 1):
+        username = f"loadclient{i}"
+        if User.query.filter_by(username=username).first() is None:
+            user = User(username=username, email=f"{username}@example.com", password=hashed,
+                        role=Role.CLIENT, full_name=f"Load Client {i}")
+            user.mark_verified()
+            db.session.add(user)
+            created += 1
+    db.session.commit()
+    click.echo(f"{created} load-test accounts created ({count} available, password '{password}').")
+
+
 SAMPLE_POSTS = [
     (
         "What to Expect at Your First Legal Consultation",

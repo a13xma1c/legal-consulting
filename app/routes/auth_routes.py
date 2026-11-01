@@ -14,6 +14,7 @@ from flask import (
 from flask_login import current_user, login_required, login_user, logout_user
 from markupsafe import Markup, escape
 from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
 
 from app.extensions import bcrypt, db
 from app.forms import (
@@ -27,7 +28,7 @@ from app.forms import (
 )
 from app.models import Post, Thread, User
 from app.services.mail import get_mailer
-from app.services.ratelimit import client_key, get_limiter
+from app.services.ratelimit import check_limits, clear_failures, peek_limits, record_failure
 from app.services.tokens import (
     generate_reset_token,
     generate_verification_token,
@@ -85,9 +86,9 @@ def _dev_show_link(label: str, link: str) -> None:
         )
 
 
-def _email_rate_limited() -> bool:
-    """True (and flashes) when this client has requested too many e-mails."""
-    if get_limiter("email").allow(client_key()):
+def _email_rate_limited(email: str) -> bool:
+    """True (and flashes) when too many e-mails were requested for this address / from this IP."""
+    if not check_limits("email", email.strip().lower()):
         return False
     flash("Too many e-mail requests. Please wait a while before trying again.", "danger")
     return True
@@ -117,7 +118,16 @@ def register():
             role=form.role.data,
         )
         db.session.add(user)
-        db.session.commit()
+        try:
+            db.session.commit()
+        except IntegrityError:
+            # Two requests passed form validation with the same username/e-mail at once.
+            db.session.rollback()
+            flash(
+                "That username or e-mail address was just taken. Please choose another.",
+                "danger",
+            )
+            return render_template("auth/register.html", form=form), 409
         send_verification_email(user)
         flash(
             "Account created! We've sent a verification link to your e-mail address - "
@@ -152,7 +162,7 @@ def resend_verification():
     """Send a fresh verification link (response is identical whether or not the e-mail exists)."""
     form = ResendVerificationForm()
     if form.validate_on_submit():
-        if _email_rate_limited():
+        if _email_rate_limited(form.email.data):
             return render_template("auth/resend_verification.html", form=form), 429
         user = User.query.filter(User.email.ilike(form.email.data.strip())).first()
         if user and not user.email_verified:
@@ -173,13 +183,17 @@ def login():
         return redirect(url_for("dashboard.dashboard_home"))
     form = LoginForm()
     if form.validate_on_submit():
-        if not get_limiter("login").allow(client_key()):
-            flash("Too many login attempts. Please wait a few minutes and try again.", "danger")
-            return render_template("auth/login.html", form=form), 429
         identifier = form.identifier.data.strip()
         user = User.query.filter(
             or_(User.email.ilike(identifier), User.username.ilike(identifier))
         ).first()
+        # Key on the *account* (username and e-mail share one bucket). Only failed attempts
+        # count, so legitimate users - or many people behind one IP - are never locked out
+        # by successful logins.
+        account_key = f"user:{user.id}" if user else f"unknown:{identifier.lower()}"
+        if peek_limits("login", account_key):
+            flash("Too many login attempts. Please wait a few minutes and try again.", "danger")
+            return render_template("auth/login.html", form=form), 429
         if user and bcrypt.check_password_hash(user.password, form.password.data):
             if not user.active:
                 flash("This account has been deactivated. Please contact us.", "danger")
@@ -194,12 +208,14 @@ def login():
                     "warning",
                 )
                 return render_template("auth/login.html", form=form)
+            clear_failures("login", account_key)
             login_user(user, remember=form.remember.data)
             flash(f"Welcome back, {user.display_name}!", "success")
             next_page = request.args.get("next")
             if _is_safe_redirect(next_page):
                 return redirect(next_page)
             return redirect(url_for("dashboard.dashboard_home"))
+        record_failure("login", account_key)
         flash("Login failed. Please check your details and try again.", "danger")
     return render_template("auth/login.html", form=form)
 
@@ -211,7 +227,7 @@ def forgot_password():
         return redirect(url_for("auth.change_password"))
     form = ForgotPasswordForm()
     if form.validate_on_submit():
-        if _email_rate_limited():
+        if _email_rate_limited(form.email.data):
             return render_template("auth/forgot_password.html", form=form), 429
         user = User.query.filter(User.email.ilike(form.email.data.strip())).first()
         if user and user.active:

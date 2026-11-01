@@ -86,3 +86,17 @@ def test_init_db_runs_migrations_outside_testing(app: Flask) -> None:
         app.testing = True
     assert result.exit_code == 0, result.output
     upgrade.assert_called_once()
+
+
+def test_seed_load_accounts(runner: FlaskCliRunner, client: FlaskClient) -> None:
+    result = runner.invoke(args=["seed-load-accounts", "--count", "5", "--password", "pw-load"])
+    assert result.exit_code == 0, result.output
+    assert "5 load-test accounts created" in result.output
+    assert User.query.filter(User.username.like("loadclient%")).count() == 5
+    assert all(u.email_verified for u in User.query.filter(User.username.like("loadclient%")))
+    # idempotent
+    result = runner.invoke(args=["seed-load-accounts", "--count", "5", "--password", "pw-load"])
+    assert "0 load-test accounts created" in result.output
+    response = client.post("/login", data={"identifier": "loadclient3", "password": "pw-load"},
+                           follow_redirects=True)
+    assert b"Welcome back, Load Client 3!" in response.data
