@@ -156,3 +156,29 @@ def test_production_logging_writes_error_log(tmp_path: Path, monkeypatch: pytest
         application.logger.removeHandler(handler)
         handler.close()
     importlib.reload(config)
+
+
+def test_sqlite_file_databases_use_wal_and_busy_timeout(tmp_path: Path) -> None:
+    """Concurrency pragmas are applied to file-backed SQLite connections."""
+    from sqlalchemy import text  # pylint: disable=import-outside-toplevel
+
+    from app.extensions import db  # pylint: disable=import-outside-toplevel
+
+    class FileConfig(TestingConfig):
+        SQLALCHEMY_DATABASE_URI = f"sqlite:///{tmp_path / 'wal.db'}"
+
+    application = create_app(FileConfig)
+    with application.app_context():
+        journal = db.session.execute(text("PRAGMA journal_mode")).scalar()
+        timeout = db.session.execute(text("PRAGMA busy_timeout")).scalar()
+        assert application.config["SQLALCHEMY_ENGINE_OPTIONS"]["connect_args"]["timeout"] == 30
+    assert journal == "wal"
+    assert timeout == 30000
+
+
+def test_sqlite_pragmas_skipped_for_other_dialects() -> None:
+    from types import SimpleNamespace  # pylint: disable=import-outside-toplevel
+
+    from app import _configure_sqlite  # pylint: disable=import-outside-toplevel
+
+    _configure_sqlite(SimpleNamespace(dialect=SimpleNamespace(name="postgresql")))  # no error

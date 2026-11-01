@@ -18,7 +18,7 @@ from flask_login import current_user
 from app.extensions import db
 from app.models import ChatMessage, ChatSession
 from app.services.ai import DISCLAIMER, MAX_MESSAGE_LENGTH, AIError, get_assistant
-from app.services.ratelimit import RateLimiter, client_key, get_limiter
+from app.services.ratelimit import RateLimiter, check_limits, get_limiter
 from app.utils import render_markdown
 
 chat = Blueprint("chat", __name__, url_prefix="/chat")
@@ -104,11 +104,20 @@ def send_message():
         ), 400
 
     chat_session = get_or_create_session()
-    # Key on the client address so resetting the session does not bypass the limit.
-    if not get_rate_limiter().allow(client_key()):
-        return jsonify(
-            {"error": "You are sending messages too quickly. Please wait a moment."}
-        ), 429
+    # Per-conversation limit (a logged-in user's conversations share one bucket so
+    # resetting the chat does not reset the allowance), plus the per-IP abuse ceiling.
+    if current_user.is_authenticated:
+        actor = f"user:{current_user.id}"
+    else:
+        actor = f"session:{chat_session.token}"
+    wait = check_limits("chat", actor)
+    if wait:
+        response = jsonify(
+            {"error": "You are sending messages too quickly. Please wait a moment.",
+             "retry_after": wait}
+        )
+        response.headers["Retry-After"] = str(wait)
+        return response, 429
 
     user_msg = ChatMessage(session_id=chat_session.id, role="user", content=text)
     db.session.add(user_msg)

@@ -6,7 +6,7 @@
     <div class="col-md-6 col-lg-4">
         <div class="card border-0 shadow-sm">
             <div class="card-body p-4">
-                <h2 class="fw-bold text-center mb-4">Welcome back</h2>
+                <h2 class="text-center mb-4">Welcome back</h2>
                 <form method="POST" novalidate>
                     {{ form.hidden_tag() }}
                     {{ render_field(form.identifier, placeholder="you@example.com or username") }}
@@ -15,7 +15,7 @@
                         <div class="form-check mb-0">{{ form.remember(class="form-check-input") }} {{ form.remember.label(class="form-check-label") }}</div>
                         <a href="{{ url_for('auth.forgot_password') }}" class="small">Forgot password?</a>
                     </div>
-                    <button type="submit" class="btn btn-navy w-100">{{ form.submit.label.text }}</button>
+                    <button type="submit" class="btn btn-filled w-100">{{ form.submit.label.text }}</button>
                 </form>
                 <p class="text-center small text-muted mt-3 mb-0">No account yet? <a href="{{ url_for('auth.register') }}">Create one</a></p>
                 <p class="text-center small text-muted mb-0">Didn't get your verification e-mail? <a href="{{ url_for('auth.resend_verification') }}">Resend it</a></p>

@@ -247,6 +247,15 @@ class Comment(db.Model):
         return f"<Comment {self.id} on post {self.post_id}>"
 
 
+Post.comment_count = column_property(
+    select(func.count(Comment.id))  # pylint: disable=not-callable
+    .where(Comment.post_id == Post.id)
+    .correlate_except(Comment)
+    .scalar_subquery(),
+    deferred=False,
+)
+
+
 # --------------------------------------------------------------------------- #
 # Forum
 # --------------------------------------------------------------------------- #

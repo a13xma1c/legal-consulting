@@ -11,7 +11,8 @@ from flask import (
     url_for,
 )
 from flask_login import current_user, login_required
-from sqlalchemy import or_
+from sqlalchemy import or_, update
+from sqlalchemy.orm import joinedload
 
 from app.extensions import db
 from app.forms import BoardForm, ReplyForm, ThreadForm
@@ -25,7 +26,12 @@ forum = Blueprint("forum", __name__, url_prefix="/forum")
 def index():
     """List boards."""
     all_boards = Board.query.order_by(Board.position, Board.name).all()
-    recent = Thread.query.order_by(Thread.last_activity.desc()).limit(8).all()
+    recent = (
+        Thread.query.options(joinedload(Thread.board))
+        .order_by(Thread.last_activity.desc())
+        .limit(8)
+        .all()
+    )
     return render_template("forum/index.html", boards=all_boards, recent=recent)
 
 
@@ -34,7 +40,7 @@ def search():
     """Search threads across all boards."""
     q = request.args.get("q", "", type=str).strip()
     page = request.args.get("page", 1, type=int)
-    query = Thread.query
+    query = Thread.query.options(joinedload(Thread.author), joinedload(Thread.board))
     if q:
         like = f"%{q}%"
         query = query.filter(or_(Thread.title.ilike(like), Thread.body.ilike(like)))
@@ -50,7 +56,8 @@ def board(slug):
     board_obj = Board.query.filter_by(slug=slug).first_or_404()
     page = request.args.get("page", 1, type=int)
     pagination = (
-        board_obj.threads.order_by(Thread.pinned.desc(), Thread.last_activity.desc())
+        board_obj.threads.options(joinedload(Thread.author))
+        .order_by(Thread.pinned.desc(), Thread.last_activity.desc())
         .paginate(
             page=page,
             per_page=current_app.config["THREADS_PER_PAGE"],
@@ -113,11 +120,16 @@ def thread(slug):
         return redirect(url_for("forum.thread", slug=slug) + f"#reply-{reply.id}")
 
     if request.method == "GET":
-        thread_obj.views = (thread_obj.views or 0) + 1
+        # Atomic UPDATE ... SET views = views + 1: a read-modify-write in Python
+        # loses increments under concurrent requests.
+        db.session.execute(
+            update(Thread).where(Thread.id == thread_obj.id).values(views=Thread.views + 1)
+        )
         db.session.commit()
+        db.session.refresh(thread_obj)
 
     page = request.args.get("page", 1, type=int)
-    pagination = thread_obj.replies.paginate(
+    pagination = thread_obj.replies.options(joinedload(Reply.author)).paginate(
         page=page, per_page=current_app.config["REPLIES_PER_PAGE"], error_out=False
     )
     return render_template(

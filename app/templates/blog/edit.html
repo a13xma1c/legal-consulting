@@ -4,7 +4,7 @@
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-lg-9">
-        <h2 class="fw-bold">{{ 'Edit article' if post else 'Write a new article' }}</h2>
+        <h2 class="">{{ 'Edit article' if post else 'Write a new article' }}</h2>
         <div class="card border-0 shadow-sm">
             <div class="card-body p-4">
                 <form method="POST" novalidate>
@@ -16,8 +16,8 @@
                     </div>
                     {{ render_field(form.body, rows=18, help="Markdown supported: **bold**, *italic*, ## headings, lists, tables, links.") }}
                     {{ render_field(form.published) }}
-                    <button type="submit" class="btn btn-navy">{{ form.submit.label.text }}</button>
-                    <a href="{{ url_for('blog.detail', slug=post.slug) if post else url_for('blog.index') }}" class="btn btn-link">Cancel</a>
+                    <button type="submit" class="btn btn-filled">{{ form.submit.label.text }}</button>
+                    <a href="{{ url_for('blog.detail', slug=post.slug) if post else url_for('blog.index') }}" class="btn btn-text">Cancel</a>
                 </form>
             </div>
         </div>

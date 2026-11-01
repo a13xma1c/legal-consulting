@@ -19,12 +19,12 @@ def test_full_consultation_lifecycle(page: Page, live_server: LiveServer) -> Non
     # Past date is rejected server-side (form has novalidate, so the browser lets it through).
     page.fill("input[name=preferred_date]", "2001-01-01")
     page.fill("textarea[name=message]", "I was dismissed without notice and believe it was unfair.")
-    submit(page, "main form button.btn-gold")
+    submit(page, "main form button.btn-accent")
     expect(page.locator(".invalid-feedback", has_text="cannot be in the past")).to_be_visible()
 
     future = (date.today() + timedelta(days=14)).isoformat()
     page.fill("input[name=preferred_date]", future)
-    submit(page, "main form button.btn-gold")
+    submit(page, "main form button.btn-accent")
     page.wait_for_url("**/consultations/*")
     assert "has been submitted" in flash_text(page)
     expect(page.get_by_text("Awaiting a lawyer")).to_be_visible()
@@ -48,7 +48,7 @@ def test_full_consultation_lifecycle(page: Page, live_server: LiveServer) -> Non
     assert "You are now handling this consultation" in flash_text(page)
     page.fill("textarea[name=response]",
               "Thank you. You have **three months** from dismissal to file a claim.")
-    submit(page, "main form button.btn-navy")
+    submit(page, "main form button.btn-filled")
     assert "Response sent to the client" in flash_text(page)
     expect(page.locator(".badge", has_text="Responded")).to_be_visible()
     logout(page)

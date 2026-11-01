@@ -218,3 +218,11 @@ def test_remaining_reprs(thread: Thread, post: Post, client_user: User) -> None:
     db.session.commit()
     assert f"on post {post.id}" in repr(comment)
     assert thread.slug in repr(thread)
+
+
+def test_post_comment_count_column_property(post: Post, client_user: User) -> None:
+    assert post.comment_count == 0
+    db.session.add_all(Comment(body=f"c{i}", post_id=post.id, author_id=client_user.id) for i in range(3))
+    db.session.commit()
+    db.session.expire(post)
+    assert post.comment_count == 3

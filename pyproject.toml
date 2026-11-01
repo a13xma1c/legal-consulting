@@ -28,6 +28,11 @@ dev = [
     "mypy>=1.10",
     "pytest-playwright>=0.5",
     "playwright>=1.56",
+    "types-requests>=2.33.0.20261006",
+    "requests>=2.32",
+]
+stress = [
+    "locust>=2.20",
 ]
 
 [build-system]
@@ -56,7 +61,10 @@ strict_equality = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q --strict-markers"
-markers = ["e2e: browser end-to-end tests (require Playwright browsers)"]
+markers = [
+    "e2e: browser end-to-end tests (require Playwright browsers)",
+    "stress: concurrency, data-volume and load tests (slower)",
+]
 filterwarnings = ["ignore::DeprecationWarning"]
 
 [tool.coverage.run]

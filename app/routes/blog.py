@@ -12,6 +12,7 @@ from flask import (
 )
 from flask_login import current_user, login_required
 from sqlalchemy import or_
+from sqlalchemy.orm import joinedload
 
 from app.extensions import db
 from app.forms import CategoryForm, CommentForm, PostForm
@@ -45,7 +46,7 @@ def index():
     q = request.args.get("q", "", type=str).strip()
     category_slug = request.args.get("category", "", type=str).strip()
 
-    query = _visible_posts_query()
+    query = _visible_posts_query().options(joinedload(Post.author), joinedload(Post.category))
     active_category = None
     if category_slug:
         active_category = Category.query.filter_by(slug=category_slug).first_or_404()
@@ -92,7 +93,7 @@ def detail(slug):
         return redirect(url_for("blog.detail", slug=post.slug) + f"#comment-{comment.id}")
 
     related = (
-        Post.query.filter(
+        Post.query.options(joinedload(Post.author)).filter(
             Post.published.is_(True),
             Post.id != post.id,
             Post.category_id == post.category_id,

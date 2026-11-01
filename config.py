@@ -36,22 +36,36 @@ class Config:
     ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
     AI_MAX_TOKENS = int(os.getenv("AI_MAX_TOKENS", "700"))
     AI_HISTORY_LIMIT = 20  # messages sent back to the model as context
-    CHAT_RATE_LIMIT = int(os.getenv("CHAT_RATE_LIMIT", "30"))  # msgs / window
-    CHAT_RATE_WINDOW = int(os.getenv("CHAT_RATE_WINDOW", "300"))  # seconds
+    # Rate limits are two-tier: a per-actor limit (conversation, account, e-mail address)
+    # sized for one human, plus a much larger per-IP ceiling that only guards against
+    # abuse. Many users legitimately share one IP (NAT, proxies, load tests), so the
+    # per-IP tier must never be the limit an ordinary population hits. ``0`` disables a tier.
+    CHAT_RATE_LIMIT = int(os.getenv("CHAT_RATE_LIMIT", "90"))  # msgs per conversation / window
+    CHAT_RATE_WINDOW = int(os.getenv("CHAT_RATE_WINDOW", "300"))
+    CHAT_IP_RATE_LIMIT = int(os.getenv("CHAT_IP_RATE_LIMIT", "6000"))  # ~20 msgs/s from one IP
+    CHAT_IP_RATE_WINDOW = int(os.getenv("CHAT_IP_RATE_WINDOW", "300"))
 
-    # Brute-force protection (per client IP)
-    LOGIN_RATE_LIMIT = int(os.getenv("LOGIN_RATE_LIMIT", "10"))
+    LOGIN_RATE_LIMIT = int(os.getenv("LOGIN_RATE_LIMIT", "10"))  # attempts per account+IP
     LOGIN_RATE_WINDOW = int(os.getenv("LOGIN_RATE_WINDOW", "300"))
-    EMAIL_RATE_LIMIT = int(os.getenv("EMAIL_RATE_LIMIT", "5"))  # verification / reset mails
+    LOGIN_IP_RATE_LIMIT = int(os.getenv("LOGIN_IP_RATE_LIMIT", "500"))
+    LOGIN_IP_RATE_WINDOW = int(os.getenv("LOGIN_IP_RATE_WINDOW", "300"))
+
+    EMAIL_RATE_LIMIT = int(os.getenv("EMAIL_RATE_LIMIT", "5"))  # mails per address+IP
     EMAIL_RATE_WINDOW = int(os.getenv("EMAIL_RATE_WINDOW", "3600"))
+    EMAIL_IP_RATE_LIMIT = int(os.getenv("EMAIL_IP_RATE_LIMIT", "200"))
+    EMAIL_IP_RATE_WINDOW = int(os.getenv("EMAIL_IP_RATE_WINDOW", "3600"))
+
+    # Behind a reverse proxy (nginx, Heroku router, ...) set this to the number of
+    # proxies so X-Forwarded-* headers are trusted and per-IP limits see real clients.
+    PROXY_FIX_X_FOR = int(os.getenv("PROXY_FIX_X_FOR", "0"))
 
     # Security headers
     CONTENT_SECURITY_POLICY = os.getenv(
         "CONTENT_SECURITY_POLICY",
         "default-src 'self'; "
         "script-src 'self' https://cdn.jsdelivr.net; "
-        "style-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; "
-        "font-src 'self' https://cdn.jsdelivr.net; "
+        "style-src 'self' https://cdn.jsdelivr.net https://fonts.googleapis.com 'unsafe-inline'; "
+        "font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; "
         "img-src 'self' data: https:; "
         "connect-src 'self'; "
         "frame-ancestors 'none'; "
@@ -91,8 +105,11 @@ class TestingConfig(Config):
     WTF_CSRF_ENABLED = False
     AI_PROVIDER = "fallback"
     CHAT_RATE_LIMIT = 1000
+    CHAT_IP_RATE_LIMIT = 0
     LOGIN_RATE_LIMIT = 1000
+    LOGIN_IP_RATE_LIMIT = 0
     EMAIL_RATE_LIMIT = 1000
+    EMAIL_IP_RATE_LIMIT = 0
     BCRYPT_LOG_ROUNDS = 4  # fast hashing in tests
 
 

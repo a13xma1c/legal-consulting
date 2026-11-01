@@ -1,21 +1,24 @@
-{# Reusable template macros #}
+{# Reusable template macros (Material Design 3 components on Bootstrap structure) #}
 
+{# Filled text field with floating label. Extra HTML attributes via ``attrs``. #}
 {% macro render_field(field, placeholder=None, rows=None, help=None, attrs={}) %}
-<div class="mb-3">
-    {% if field.type != 'BooleanField' %}
-        {{ field.label(class="form-label fw-semibold") }}
-    {% endif %}
-    {% set css = 'form-select' if field.type == 'SelectField' else ('form-check-input' if field.type == 'BooleanField' else 'form-control') %}
-    {% set css = css ~ (' is-invalid' if field.errors else '') %}
+<div class="mb-3 md-field">
     {% if field.type == 'BooleanField' %}
         <div class="form-check">
-            {{ field(class=css) }}
+            {{ field(class='form-check-input' ~ (' is-invalid' if field.errors else '')) }}
             {{ field.label(class="form-check-label") }}
         </div>
-    {% elif rows %}
-        {{ field(class=css, rows=rows, placeholder=placeholder or '', **attrs) }}
     {% else %}
-        {{ field(class=css, placeholder=placeholder or '', **attrs) }}
+        {% set css = 'form-select' if field.type == 'SelectField' else 'form-control' %}
+        {% set css = css ~ (' is-invalid' if field.errors else '') ~ (' md-always-float' if field.type == 'DateField' else '') %}
+        <div class="form-floating">
+            {% if rows %}
+                {{ field(class=css, rows=rows, placeholder=placeholder or field.label.text, style='height: ' ~ (rows * 1.6 + 1.75) ~ 'rem', **attrs) }}
+            {% else %}
+                {{ field(class=css, placeholder=placeholder or field.label.text, **attrs) }}
+            {% endif %}
+            {{ field.label() }}
+        </div>
     {% endif %}
     {% for error in field.errors %}
         <div class="invalid-feedback d-block">{{ error }}</div>
@@ -29,35 +32,51 @@
 <nav aria-label="Pagination">
     <ul class="pagination justify-content-center">
         <li class="page-item {% if not pag.has_prev %}disabled{% endif %}">
-            <a class="page-link" href="{{ url_for(endpoint, page=pag.prev_num, **kwargs) if pag.has_prev else '#' }}">&laquo;</a>
+            <a class="page-link" aria-label="Previous page" href="{{ url_for(endpoint, page=pag.prev_num, **kwargs) if pag.has_prev else '#' }}">{{ icon('chevron_left') }}</a>
         </li>
         {% for p in pag.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
             {% if p %}
-                <li class="page-item {% if p == pag.page %}active{% endif %}"><a class="page-link" href="{{ url_for(endpoint, page=p, **kwargs) }}">{{ p }}</a></li>
+                <li class="page-item {% if p == pag.page %}active{% endif %}"><a class="page-link" href="{{ url_for(endpoint, page=p, **kwargs) }}" {% if p == pag.page %}aria-current="page"{% endif %}>{{ p }}</a></li>
             {% else %}
                 <li class="page-item disabled"><span class="page-link">…</span></li>
             {% endif %}
         {% endfor %}
         <li class="page-item {% if not pag.has_next %}disabled{% endif %}">
-            <a class="page-link" href="{{ url_for(endpoint, page=pag.next_num, **kwargs) if pag.has_next else '#' }}">&raquo;</a>
+            <a class="page-link" aria-label="Next page" href="{{ url_for(endpoint, page=pag.next_num, **kwargs) if pag.has_next else '#' }}">{{ icon('chevron_right') }}</a>
         </li>
     </ul>
 </nav>
 {% endif %}
 {% endmacro %}
 
-{% macro post_form(action, label, css='btn-outline-danger btn-sm', confirm='Are you sure?', icon='bi-trash') %}
+{# Small POST form rendered as a button, with a confirmation dialog (handled in main.js). #}
+{% macro post_form(action, label, css='btn-outlined btn-error btn-sm', confirm='Are you sure?', icon_name='delete') %}
 <form method="POST" action="{{ action }}" class="d-inline" data-confirm="{{ confirm }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <button type="submit" class="btn {{ css }}"><i class="bi {{ icon }}"></i> {{ label }}</button>
+    <button type="submit" class="btn {{ css }}" {% if not label %}aria-label="{{ confirm }}"{% endif %}>{{ icon(icon_name) }}{% if label %} {{ label }}{% endif %}</button>
 </form>
 {% endmacro %}
 
 {% macro author_badge(user) %}
-{% if user.is_lawyer %}<span class="badge bg-gold text-navy" title="Verified lawyer"><i class="bi bi-patch-check-fill"></i> Lawyer</span>
+{% if user.is_lawyer %}<span class="badge bg-gold" title="Verified lawyer">{{ icon('verified', 'icon-filled') }} Lawyer</span>
 {% elif user.is_admin %}<span class="badge bg-danger">Admin</span>{% endif %}
 {% endmacro %}
 
 {% macro avatar(user, size=40) %}
-<span class="avatar d-inline-flex align-items-center justify-content-center rounded-circle bg-navy text-gold fw-bold" style="width:{{ size }}px;height:{{ size }}px;font-size:{{ (size * 0.4)|int }}px">{{ user.display_name[:1]|upper }}</span>
+<span class="avatar d-inline-flex align-items-center justify-content-center rounded-circle" style="width:{{ size }}px;height:{{ size }}px;font-size:{{ (size * 0.4)|int }}px">{{ user.display_name[:1]|upper }}</span>
+{% endmacro %}
+
+{# Section heading with a leading icon #}
+{% macro section_title(text, icon_name, level='h2') %}
+<{{ level }} class="section-title fw-bold mb-1">{{ icon(icon_name) }} <span>{{ text }}</span></{{ level }}>
+{% endmacro %}
+
+{# Empty-state placeholder #}
+{% macro empty_state(icon_name, title, text) %}
+<div class="card empty-state">
+    {{ icon(icon_name) }}
+    <h4 class="mt-3">{{ title }}</h4>
+    <p class="text-muted mb-0">{{ text }}</p>
+    {{ caller() if caller }}
+</div>
 {% endmacro %}

@@ -4,84 +4,101 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="theme-color" content="#1e3a6e">
     <meta name="description" content="{% block meta_description %}{{ site_name }} - trusted legal consulting, expert articles, a community forum and an instant AI legal assistant.{% endblock %}">
     <title>{% block title %}{{ site_name }}{% endblock %}</title>
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
     {% block head %}{% endblock %}
 </head>
 <body class="d-flex flex-column min-vh-100">
     <a class="visually-hidden-focusable" href="#main-content">Skip to main content</a>
 
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-navy sticky-top shadow-sm">
-        <div class="container">
-            <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="{{ url_for('main.home') }}">
-                <i class="bi bi-bank2 text-gold"></i> {{ site_name }}
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'main.services' %}active{% endif %}" href="{{ url_for('main.services') }}">Services</a></li>
-                    <li class="nav-item"><a class="nav-link {% if request.blueprint == 'blog' %}active{% endif %}" href="{{ url_for('blog.index') }}">Blog</a></li>
-                    <li class="nav-item"><a class="nav-link {% if request.blueprint == 'forum' %}active{% endif %}" href="{{ url_for('forum.index') }}">Forum</a></li>
-                    <li class="nav-item"><a class="nav-link {% if request.blueprint == 'chat' %}active{% endif %}" href="{{ url_for('chat.page') }}"><i class="bi bi-chat-dots"></i> AI Assistant</a></li>
-                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'main.about' %}active{% endif %}" href="{{ url_for('main.about') }}">About</a></li>
-                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'main.contact' %}active{% endif %}" href="{{ url_for('main.contact') }}">Contact</a></li>
-                </ul>
-                <ul class="navbar-nav ms-auto align-items-lg-center">
-                    {% if current_user.is_authenticated %}
-                        {% if current_user.role == 'client' %}
-                        <li class="nav-item me-lg-2">
-                            <a class="btn btn-gold btn-sm" href="{{ url_for('consultations.create') }}"><i class="bi bi-calendar-plus"></i> Book consultation</a>
-                        </li>
+    <!-- Top app bar -->
+    <header class="md-top-app-bar sticky-top" id="top-app-bar">
+        <nav class="navbar navbar-expand-lg py-2" aria-label="Main navigation">
+            <div class="container">
+                <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('main.home') }}">
+                    {{ icon('balance') }} {{ site_name }}
+                </a>
+                <div class="d-flex align-items-center gap-1 order-lg-last ms-lg-2">
+                    <button type="button" class="btn btn-icon md-icon-button" id="theme-toggle" aria-label="Theme: automatic. Switch theme" title="Switch theme">
+                        {{ icon('brightness_auto') }}
+                    </button>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon">{{ icon('menu') }}</span>
+                    </button>
+                </div>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav me-auto ms-lg-3 gap-lg-1">
+                        <li class="nav-item"><a class="nav-link {% if request.endpoint == 'main.services' %}active{% endif %}" href="{{ url_for('main.services') }}">Services</a></li>
+                        <li class="nav-item"><a class="nav-link {% if request.blueprint == 'blog' %}active{% endif %}" href="{{ url_for('blog.index') }}">Blog</a></li>
+                        <li class="nav-item"><a class="nav-link {% if request.blueprint == 'forum' %}active{% endif %}" href="{{ url_for('forum.index') }}">Forum</a></li>
+                        <li class="nav-item"><a class="nav-link {% if request.blueprint == 'chat' %}active{% endif %}" href="{{ url_for('chat.page') }}">{{ icon('smart_toy') }} AI Assistant</a></li>
+                        <li class="nav-item"><a class="nav-link {% if request.endpoint == 'main.about' %}active{% endif %}" href="{{ url_for('main.about') }}">About</a></li>
+                        <li class="nav-item"><a class="nav-link {% if request.endpoint == 'main.contact' %}active{% endif %}" href="{{ url_for('main.contact') }}">Contact</a></li>
+                    </ul>
+                    <ul class="navbar-nav ms-auto align-items-lg-center gap-2">
+                        {% if current_user.is_authenticated %}
+                            {% if current_user.role == 'client' %}
+                            <li class="nav-item">
+                                <a class="btn btn-filled btn-sm" href="{{ url_for('consultations.create') }}">{{ icon('event') }} Book consultation</a>
+                            </li>
+                            {% endif %}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle md-account-button" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <span class="avatar d-inline-flex align-items-center justify-content-center rounded-circle" style="width:32px;height:32px;font-size:14px">{{ current_user.display_name[:1]|upper }}</span>
+                                    <span>{{ current_user.display_name }}</span>
+                                    {% if current_user.is_lawyer %}<span class="badge bg-gold">Lawyer</span>{% elif current_user.is_admin %}<span class="badge bg-danger">Admin</span>{% endif %}
+                                    {{ icon('arrow_drop_down') }}
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="{{ url_for('dashboard.dashboard_home') }}">{{ icon('dashboard') }}Dashboard</a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}">{{ icon('person') }}My profile</a></li>
+                                    {% if current_user.is_staff %}
+                                    <li><a class="dropdown-item" href="{{ url_for('blog.create') }}">{{ icon('edit_note') }}Write article</a></li>
+                                    {% endif %}
+                                    {% if current_user.is_admin %}
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('admin.users') }}">{{ icon('group') }}Manage users</a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('blog.categories') }}">{{ icon('label') }}Blog categories</a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('forum.boards') }}">{{ icon('view_kanban') }}Forum boards</a></li>
+                                    {% endif %}
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form method="POST" action="{{ url_for('auth.logout') }}">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="dropdown-item text-danger">{{ icon('logout') }}Log out</button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </li>
+                        {% else %}
+                            <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.login') }}">Log in</a></li>
+                            <li class="nav-item"><a class="btn btn-filled btn-sm" href="{{ url_for('auth.register') }}">Get started</a></li>
                         {% endif %}
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="bi bi-person-circle"></i> {{ current_user.display_name }}
-                                {% if current_user.is_lawyer %}<span class="badge bg-gold text-navy ms-1">Lawyer</span>{% elif current_user.is_admin %}<span class="badge bg-danger ms-1">Admin</span>{% endif %}
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" href="{{ url_for('dashboard.dashboard_home') }}"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a></li>
-                                <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}"><i class="bi bi-person me-2"></i>My profile</a></li>
-                                {% if current_user.is_staff %}
-                                <li><a class="dropdown-item" href="{{ url_for('blog.create') }}"><i class="bi bi-pencil-square me-2"></i>Write article</a></li>
-                                {% endif %}
-                                {% if current_user.is_admin %}
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{{ url_for('admin.users') }}"><i class="bi bi-people me-2"></i>Manage users</a></li>
-                                <li><a class="dropdown-item" href="{{ url_for('blog.categories') }}"><i class="bi bi-tags me-2"></i>Blog categories</a></li>
-                                <li><a class="dropdown-item" href="{{ url_for('forum.boards') }}"><i class="bi bi-kanban me-2"></i>Forum boards</a></li>
-                                {% endif %}
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <form method="POST" action="{{ url_for('auth.logout') }}" class="px-3 py-1">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <button type="submit" class="btn btn-link dropdown-item p-0 text-danger"><i class="bi bi-box-arrow-right me-2"></i>Log out</button>
-                                    </form>
-                                </li>
-                            </ul>
-                        </li>
-                    {% else %}
-                        <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.login') }}">Log in</a></li>
-                        <li class="nav-item"><a class="btn btn-gold btn-sm ms-lg-2" href="{{ url_for('auth.register') }}">Get started</a></li>
-                    {% endif %}
-                </ul>
+                    </ul>
+                </div>
             </div>
-        </div>
-    </nav>
+        </nav>
+    </header>
 
-    <!-- Flash messages -->
-    <div class="container mt-3" id="flash-container">
+    <!-- Banners (flash messages) -->
+    <div class="container mt-3" id="flash-container" aria-live="polite">
         {% with messages = get_flashed_messages(with_categories=True) %}
             {% for category, message in messages %}
-                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
-                    {{ message }}
+                {% set category = 'danger' if category == 'error' else category %}
+                {% set banner_icon = {'success': 'check_circle', 'danger': 'error', 'warning': 'warning', 'info': 'info'}.get(category, 'info') %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ icon(banner_icon) }}
+                    <div class="flex-grow-1">{{ message }}</div>
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             {% endfor %}
@@ -97,16 +114,16 @@
     </main>
 
     <!-- Footer -->
-    <footer class="bg-navy text-light mt-auto pt-5 pb-3">
+    <footer class="bg-navy mt-auto pt-5 pb-3">
         <div class="container">
             <div class="row g-4">
                 <div class="col-md-4">
-                    <h5 class="fw-bold"><i class="bi bi-bank2 text-gold"></i> {{ site_name }}</h5>
+                    <h5 class="d-flex align-items-center gap-2">{{ icon('balance', 'text-gold') }} {{ site_name }}</h5>
                     <p class="text-light-50 small">Clear, practical legal guidance from experienced lawyers - plus a community and an AI assistant available around the clock.</p>
                 </div>
                 <div class="col-6 col-md-2">
                     <h6 class="text-gold">Explore</h6>
-                    <ul class="list-unstyled small">
+                    <ul class="list-unstyled small d-grid gap-2">
                         <li><a href="{{ url_for('main.services') }}">Services</a></li>
                         <li><a href="{{ url_for('blog.index') }}">Blog</a></li>
                         <li><a href="{{ url_for('forum.index') }}">Forum</a></li>
@@ -115,7 +132,7 @@
                 </div>
                 <div class="col-6 col-md-2">
                     <h6 class="text-gold">Company</h6>
-                    <ul class="list-unstyled small">
+                    <ul class="list-unstyled small d-grid gap-2">
                         <li><a href="{{ url_for('main.about') }}">About us</a></li>
                         <li><a href="{{ url_for('main.contact') }}">Contact</a></li>
                         <li><a href="{{ url_for('main.privacy') }}">Privacy</a></li>
@@ -127,7 +144,7 @@
                     <p class="small text-light-50">Content on this site, including forum replies and the AI assistant, is general information and does not constitute legal advice or create a lawyer-client relationship.</p>
                 </div>
             </div>
-            <hr class="border-secondary">
+            <hr>
             <div class="d-flex flex-wrap justify-content-between small text-light-50">
                 <span>&copy; {{ current_year }} {{ site_name }}. All rights reserved.</span>
                 <span>{{ contact_email }}</span>
@@ -136,23 +153,23 @@
     </footer>
 
     {% if request.blueprint != 'chat' %}
-    <!-- Floating AI chat widget -->
+    <!-- Floating AI chat: extended FAB + sheet -->
     <div id="chat-widget" class="chat-widget" data-history-url="{{ url_for('chat.history') }}" data-message-url="{{ url_for('chat.send_message') }}" data-reset-url="{{ url_for('chat.reset') }}">
-        <button class="chat-widget-toggle btn btn-gold shadow" type="button" aria-label="Open AI legal assistant" aria-expanded="false">
-            <i class="bi bi-chat-dots-fill"></i>
+        <button class="chat-widget-toggle btn" type="button" aria-label="Open AI legal assistant" aria-expanded="false">
+            {{ icon('chat', 'icon-filled') }}<span class="fab-label">Ask the assistant</span>
         </button>
-        <div class="chat-widget-panel shadow-lg" hidden>
-            <div class="chat-widget-header bg-navy text-light d-flex justify-content-between align-items-center px-3 py-2">
-                <span><i class="bi bi-robot text-gold me-1"></i> Legal Assistant</span>
-                <div>
-                    <a href="{{ url_for('chat.page') }}" class="btn btn-sm btn-link text-light" title="Open full chat"><i class="bi bi-arrows-angle-expand"></i></a>
-                    <button type="button" class="btn btn-sm btn-link text-light chat-widget-close" aria-label="Close chat"><i class="bi bi-x-lg"></i></button>
+        <div class="chat-widget-panel" hidden role="dialog" aria-label="AI legal assistant">
+            <div class="chat-widget-header d-flex justify-content-between align-items-center ps-3 pe-2 py-1">
+                <span class="d-flex align-items-center gap-2">{{ icon('smart_toy', 'text-gold') }} Legal Assistant</span>
+                <div class="d-flex">
+                    <a href="{{ url_for('chat.page') }}" class="btn btn-icon" title="Open full chat" aria-label="Open full chat">{{ icon('open_in_full') }}</a>
+                    <button type="button" class="btn btn-icon chat-widget-close" aria-label="Close chat">{{ icon('close') }}</button>
                 </div>
             </div>
             <div class="chat-messages p-3" data-chat-messages></div>
-            <form class="chat-form d-flex gap-2 p-2 border-top" data-chat-form>
-                <input type="text" class="form-control form-control-sm" name="message" placeholder="Ask a legal question…" autocomplete="off" maxlength="4000" required>
-                <button class="btn btn-navy btn-sm" type="submit" aria-label="Send"><i class="bi bi-send"></i></button>
+            <form class="chat-form d-flex gap-2 p-2 align-items-center" data-chat-form>
+                <input type="text" class="form-control" name="message" placeholder="Ask a legal question…" autocomplete="off" maxlength="4000" required aria-label="Message">
+                <button class="btn btn-icon btn-filled" type="submit" aria-label="Send">{{ icon('send') }}</button>
             </form>
         </div>
     </div>

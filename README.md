@@ -71,11 +71,13 @@ All settings are environment variables (see `.env.example`):
 | `AI_PROVIDER` | `auto` | `auto` uses Anthropic if a key is present, else the offline fallback |
 | `ANTHROPIC_API_KEY` | — | Enables the live AI assistant |
 | `ANTHROPIC_MODEL` | `claude-sonnet-4-20250514` | Model name |
-| `CHAT_RATE_LIMIT` / `CHAT_RATE_WINDOW` | `30` / `300` | Messages per window per visitor |
+| `CHAT_RATE_LIMIT` / `CHAT_RATE_WINDOW` | `90` / `300` | Messages per **conversation** (session or user) per window |
+| `CHAT_IP_RATE_LIMIT` / `CHAT_IP_RATE_WINDOW` | `6000` / `300` | Abuse ceiling per IP - generous because many users share IPs (NAT, proxies); `0` disables |
+| `PROXY_FIX_X_FOR` | `0` | Number of reverse proxies in front of the app; set to `1` behind nginx/Heroku so per-IP limits see real client addresses |
 | `MAIL_SERVER`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_USE_TLS`, `MAIL_DEFAULT_SENDER` | unset | SMTP for verification e-mails. If `MAIL_SERVER` is unset, messages are logged to the console (and, in development, the link is shown in the UI). |
 | `VERIFY_TOKEN_MAX_AGE` / `RESET_TOKEN_MAX_AGE` | `86400` / `3600` | Lifetime of verification / password-reset links |
-| `LOGIN_RATE_LIMIT` / `LOGIN_RATE_WINDOW` | `10` / `300` | Login attempts per IP per window |
-| `EMAIL_RATE_LIMIT` / `EMAIL_RATE_WINDOW` | `5` / `3600` | Verification/reset e-mails per IP per window |
+| `LOGIN_RATE_LIMIT` / `LOGIN_RATE_WINDOW` | `10` / `300` | **Failed** login attempts per account per window (cleared on success); `LOGIN_IP_RATE_LIMIT` (`500`) is the per-IP ceiling |
+| `EMAIL_RATE_LIMIT` / `EMAIL_RATE_WINDOW` | `5` / `3600` | Verification/reset e-mails per address per window; `EMAIL_IP_RATE_LIMIT` (`200`) per IP |
 | `CONTENT_SECURITY_POLICY` | strict default | Override or set empty to disable the CSP header |
 
 ## AI assistant design
@@ -95,6 +97,31 @@ POST /chat/api/reset        start a new conversation
 ```
 
 JSON requests must include the `X-CSRFToken` header (read from the `<meta name="csrf-token">` tag — `static/js/chat.js` handles this).
+
+## Design system
+
+The UI follows **Material Design 3** on top of Bootstrap's grid and JavaScript (collapse, dropdown,
+dismissible alerts). `app/static/css/style.css` defines the M3 tokens - colour scheme (navy primary,
+gold tertiary, tonal surface containers), type scale (Roboto), shape scale, elevation levels and
+motion - and styles Bootstrap's markup as Material components:
+
+| Material component | Implementation |
+|---|---|
+| Top app bar | `.md-top-app-bar` - surface colour, elevates on scroll (`main.js`) |
+| Buttons | `.btn-filled`, `.btn-tonal`, `.btn-outlined`, `.btn-text`, `.btn-accent`; state layers + ripple |
+| Text fields | Filled variant with floating labels (`render_field` macro) |
+| Cards, lists, menus, data tables, chips, banners, pagination | Restyled Bootstrap classes |
+| Extended FAB + sheet | Floating AI assistant widget |
+| Icons | Material Symbols via the `icon('name')` Jinja helper |
+
+**Light and dark themes.** Both schemes are defined as M3 token sets (`:root` and
+`html[data-bs-theme="dark"]`). The theme follows the operating system by default; the app-bar toggle
+cycles *auto → light → dark*, persists the choice in `localStorage`, and `static/js/theme.js` applies
+it in `<head>` before first paint (as an external file, because the CSP forbids inline scripts).
+Bootstrap's `data-bs-theme` is kept in sync so its own components switch as well.
+
+Fonts and icons load from Google Fonts (allowed in the CSP). Everything degrades gracefully
+without them.
 
 ## Project layout
 
@@ -126,7 +153,8 @@ tests/                  pytest suite (see below)
 ```bash
 uv run playwright install chromium              # once - browser for the e2e tests
 uv run pytest                                   # everything (unit + integration + e2e)
-uv run pytest -m "not e2e" -p no:playwright     # fast: skip browser tests
+uv run pytest -m "not e2e and not stress" -p no:playwright   # fast: unit + integration only
+uv run pytest tests/stress -p no:playwright -s  # stress tests (prints soak latency summary)
 uv run pytest tests/e2e --headed                # watch the browser tests run
 uv run pytest --cov --cov-report=term-missing   # coverage (unit/integration)
 uv run mypy                                     # type-check the test-suite
@@ -157,6 +185,32 @@ the site like a user:
 - Public pages, search, 404/403 pages, contact form
 
 Set `E2E_OFFLINE=1` to block CDN requests (Bootstrap) when running without internet access.
+
+**Stress tests** (`tests/stress/`, marker `stress`) run a threaded server and hit it with many
+concurrent clients, or build thousands of rows in the test database:
+
+- *Concurrency correctness*: 100 simultaneous thread views yield exactly 100 (atomic counter);
+  racing registrations for one username never 500 and create exactly one account; the rate limiter
+  admits exactly `limit` calls under contention and prunes stale keys; concurrent chat sessions stay
+  isolated; 60 simultaneous forum replies all persist.
+- *Scale*: with ~1,500 posts / 2,000 threads / 4,500 comments, listing pages must stay within a
+  fixed SQL-query budget (N+1 guard) and latency bounds; the sitemap and admin user search with
+  thousands of rows stay cheap.
+- *Large payloads*: maximum-size chat messages and forum posts, 200 KB of hostile Markdown through
+  the sanitiser, deeply nested lists.
+- *Soak*: 20 clients for 8 seconds with a realistic request mix - zero errors and p95 < 1.5 s on the
+  single-process development server.
+
+**Load generation** with Locust (`locustfile.py`) for open-ended capacity testing against any
+deployment - anonymous visitors, clients and lawyers with realistic task weights:
+
+```bash
+uv sync --group stress
+uv run flask --app wsgi seed-load-accounts --count 100   # one account per simulated client
+uv run flask --app wsgi run &            # or point --host at a staging server
+uv run locust -f locustfile.py --host http://127.0.0.1:5000            # web UI on :8089
+uv run locust -f locustfile.py --host http://127.0.0.1:5000 --headless -u 50 -r 5 -t 2m --csv=load
+```
 
 ## Deployment
 

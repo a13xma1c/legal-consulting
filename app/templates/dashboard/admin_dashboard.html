@@ -1,38 +1,38 @@
 {% extends "base.html" %}
 {% block title %}Admin dashboard - {{ site_name }}{% endblock %}
 {% block content %}
-<h2 class="fw-bold mb-4">Administration</h2>
+<h2 class="mb-4">Administration</h2>
 <div class="row g-3 mb-4">
-    {% for label, value, icon in [
-        ('Users', stats.users, 'bi-people'), ('Lawyers', stats.lawyers, 'bi-briefcase'), ('Clients', stats.clients, 'bi-person'),
-        ('Consultations', stats.consultations, 'bi-calendar-check'), ('Pending', stats.pending, 'bi-hourglass-split'),
-        ('Blog posts', stats.posts, 'bi-journal-text'), ('Forum threads', stats.threads, 'bi-chat-square-text'), ('Chat sessions', stats.chat_sessions, 'bi-robot')] %}
+    {% for label, value, icon_name in [
+        ('Users', stats.users, 'group'), ('Lawyers', stats.lawyers, 'work'), ('Clients', stats.clients, 'person'),
+        ('Consultations', stats.consultations, 'event_available'), ('Pending', stats.pending, 'hourglass_top'),
+        ('Blog posts', stats.posts, 'article'), ('Forum threads', stats.threads, 'forum'), ('Chat sessions', stats.chat_sessions, 'smart_toy')] %}
     <div class="col-6 col-md-3">
-        <div class="card border-0 shadow-sm stat-card">
+        <div class="card shadow-sm stat-card">
             <div class="card-body d-flex align-items-center gap-3">
-                <i class="bi {{ icon }} fs-2 text-gold"></i>
-                <div><div class="fs-3 fw-bold text-navy">{{ value }}</div><div class="small text-muted">{{ label }}</div></div>
+                {{ icon(icon_name, 'icon-lg text-gold') }}
+                <div><div class="fs-3 text-navy">{{ value }}</div><div class="small text-muted">{{ label }}</div></div>
             </div>
         </div>
     </div>
     {% endfor %}
 </div>
 <div class="d-flex gap-2 mb-4 flex-wrap">
-    <a href="{{ url_for('admin.users') }}" class="btn btn-navy btn-sm"><i class="bi bi-people"></i> Manage users</a>
-    <a href="{{ url_for('blog.categories') }}" class="btn btn-outline-navy btn-sm"><i class="bi bi-tags"></i> Blog categories ({{ stats.categories }})</a>
-    <a href="{{ url_for('forum.boards') }}" class="btn btn-outline-navy btn-sm"><i class="bi bi-kanban"></i> Forum boards ({{ stats.boards }})</a>
-    <a href="{{ url_for('blog.create') }}" class="btn btn-outline-navy btn-sm"><i class="bi bi-pencil-square"></i> Write article</a>
+    <a href="{{ url_for('admin.users') }}" class="btn btn-filled btn-sm">{{ icon('group') }} Manage users</a>
+    <a href="{{ url_for('blog.categories') }}" class="btn btn-outlined btn-sm">{{ icon('label') }} Blog categories ({{ stats.categories }})</a>
+    <a href="{{ url_for('forum.boards') }}" class="btn btn-outlined btn-sm">{{ icon('view_kanban') }} Forum boards ({{ stats.boards }})</a>
+    <a href="{{ url_for('blog.create') }}" class="btn btn-outlined btn-sm">{{ icon('edit_note') }} Write article</a>
 </div>
 <div class="row g-4">
     <div class="col-lg-6">
-        <h5 class="fw-bold">Recent users</h5>
+        <h5 class="">Recent users</h5>
         <table class="table table-sm bg-white shadow-sm">
             <thead class="table-light"><tr><th>User</th><th>Email</th><th>Role</th><th>Joined</th></tr></thead>
-            <tbody>{% for u in recent_users %}<tr><td><a href="{{ url_for('auth.public_profile', username=u.username) }}">{{ u.username }}</a></td><td class="small">{{ u.email }} {% if u.email_verified %}<i class="bi bi-patch-check-fill text-success" title="Verified"></i>{% else %}<span class="badge bg-warning text-dark">Unverified</span>{% endif %}</td><td><span class="badge bg-secondary">{{ u.role }}</span></td><td class="small text-muted">{{ u.created_at|timeago }}</td></tr>{% endfor %}</tbody>
+            <tbody>{% for u in recent_users %}<tr><td><a href="{{ url_for('auth.public_profile', username=u.username) }}">{{ u.username }}</a></td><td class="small">{{ u.email }} {% if u.email_verified %}{{ icon('verified', 'text-success') }}{% else %}<span class="badge bg-warning text-dark">Unverified</span>{% endif %}</td><td><span class="badge bg-secondary">{{ u.role }}</span></td><td class="small text-muted">{{ u.created_at|timeago }}</td></tr>{% endfor %}</tbody>
         </table>
     </div>
     <div class="col-lg-6">
-        <h5 class="fw-bold">Recent consultations</h5>
+        <h5 class="">Recent consultations</h5>
         <table class="table table-sm bg-white shadow-sm">
             <thead class="table-light"><tr><th>Ref</th><th>Client</th><th>Area</th><th>Status</th><th></th></tr></thead>
             <tbody>{% for c in recent_consultations %}<tr><td class="small">{{ c.reference }}</td><td>{{ c.client.username }}</td><td class="small">{{ c.practice_area_label }}</td><td><span class="badge bg-{{ status_badge(c.status) }}">{{ c.status }}</span></td><td><a href="{{ url_for('consultations.detail', consultation_id=c.id) }}" class="small">View</a></td></tr>{% else %}<tr><td colspan="5" class="text-muted">None yet.</td></tr>{% endfor %}</tbody>

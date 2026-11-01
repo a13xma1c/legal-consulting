@@ -3,14 +3,14 @@
 {% block title %}Users - Admin - {{ site_name }}{% endblock %}
 {% block content %}
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-    <h2 class="fw-bold mb-0">Users <span class="text-muted fs-6">({{ pagination.total }})</span></h2>
+    <h2 class="mb-0">Users <span class="text-muted fs-6">({{ pagination.total }})</span></h2>
     <form method="GET" class="d-flex gap-2" role="search">
         <input type="search" name="q" class="form-control form-control-sm" placeholder="Search name, username or e-mail" value="{{ q }}">
         <select name="role" class="form-select form-select-sm" style="width:auto">
             <option value="">All roles</option>
             {% for r in roles %}<option value="{{ r }}" {% if role == r %}selected{% endif %}>{{ r|capitalize }}</option>{% endfor %}
         </select>
-        <button class="btn btn-navy btn-sm" type="submit"><i class="bi bi-search"></i></button>
+        <button class="btn btn-filled btn-sm" type="submit">{{ icon('search') }}</button>
     </form>
 </div>
 <div class="table-responsive">
@@ -19,7 +19,7 @@
     <tbody>
     {% for u in pagination.items %}
         <tr class="{% if not u.active %}table-secondary{% endif %}">
-            <td><a href="{{ url_for('auth.public_profile', username=u.username) }}" class="fw-semibold text-navy text-decoration-none">{{ u.display_name }}</a><div class="small text-muted">@{{ u.username }}</div></td>
+            <td><a href="{{ url_for('auth.public_profile', username=u.username) }}" class="fw-medium text-navy text-decoration-none">{{ u.display_name }}</a><div class="small text-muted">@{{ u.username }}</div></td>
             <td class="small">{{ u.email }}</td>
             <td>
                 {% if u.id == current_user.id %}
@@ -30,7 +30,7 @@
                     <select name="role" class="form-select form-select-sm" style="width:auto" aria-label="Role for {{ u.username }}">
                         {% for r in roles %}<option value="{{ r }}" {% if u.role == r %}selected{% endif %}>{{ r|capitalize }}</option>{% endfor %}
                     </select>
-                    <button class="btn btn-outline-navy btn-sm" type="submit" title="Save role"><i class="bi bi-check-lg"></i></button>
+                    <button class="btn btn-outlined btn-sm" type="submit" title="Save role" aria-label="Save role for {{ u.username }}">{{ icon('check') }}</button>
                 </form>
                 {% endif %}
             </td>
@@ -42,11 +42,11 @@
             <td class="small text-muted">{{ u.created_at|timeago }}</td>
             <td class="text-end">
                 {% if u.id != current_user.id %}
-                    {% if not u.email_verified %}{{ post_form(url_for('admin.verify', user_id=u.id), 'Verify', css='btn-outline-success btn-sm', confirm='Mark this e-mail as verified?', icon='bi-patch-check') }}{% endif %}
+                    {% if not u.email_verified %}{{ post_form(url_for('admin.verify', user_id=u.id), 'Verify', css='btn-outlined text-success btn-sm', confirm='Mark this e-mail as verified?', icon_name='verified') }}{% endif %}
                     {% if u.active %}
-                        {{ post_form(url_for('admin.toggle_active', user_id=u.id), 'Deactivate', css='btn-outline-danger btn-sm', confirm='Deactivate this account? They will no longer be able to log in.', icon='bi-person-x') }}
+                        {{ post_form(url_for('admin.toggle_active', user_id=u.id), 'Deactivate', css='btn-outlined btn-error btn-sm', confirm='Deactivate this account? They will no longer be able to log in.', icon_name='person_off') }}
                     {% else %}
-                        {{ post_form(url_for('admin.toggle_active', user_id=u.id), 'Reactivate', css='btn-outline-secondary btn-sm', confirm='Reactivate this account?', icon='bi-person-check') }}
+                        {{ post_form(url_for('admin.toggle_active', user_id=u.id), 'Reactivate', css='btn-outlined btn-sm', confirm='Reactivate this account?', icon_name='how_to_reg') }}
                     {% endif %}
                 {% endif %}
             </td>

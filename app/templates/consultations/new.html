@@ -4,7 +4,7 @@
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-lg-8">
-        <h2 class="fw-bold">Request a consultation</h2>
+        <h2>Request a consultation</h2>
         <p class="text-muted">Tell us about your matter. A lawyer in the relevant practice area will review it and respond through your dashboard. Everything you submit is confidential.</p>
         <div class="card border-0 shadow-sm">
             <div class="card-body p-4">
@@ -15,7 +15,7 @@
                         <div class="col-md-5">{{ render_field(form.preferred_date, help="Optional - today or later.", attrs={"min": today}) }}</div>
                     </div>
                     {{ render_field(form.message, rows=8, placeholder="What happened, when, and what outcome are you hoping for? Include any deadlines you are aware of.") }}
-                    <button type="submit" class="btn btn-gold">{{ form.submit.label.text }}</button>
+                    <button type="submit" class="btn btn-accent">{{ form.submit.label.text }}</button>
                 </form>
             </div>
         </div>
